@@ -1,5 +1,8 @@
 # Simple Deep learning library 
 
+This is a simple(baby) implementation of an autograd engine that supports `Tensors`. 
+
+
 ```python 
 
 from baby import Tensor 
@@ -20,10 +23,10 @@ print(e.grad)
 
 ```r
 git clone <REPO>
-cd <REPO>#
+cd <REPO>
 
 #Create virtual environment
-#we use uv 
+#we use uv package manager 
 
 uv pip install numpy pytest 
 ```
@@ -31,7 +34,7 @@ uv pip install numpy pytest
 # Tests
 
 ```r
-  wsl2/linux 
+# wsl2/linux 
 PYTHONPATH=. uv run pytest 
 
 # windows 
