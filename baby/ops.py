@@ -97,24 +97,13 @@ class Pow(Op):
         
     def backward(self, out_grad, node):
         a, b = node._inputs
-        # one = Tensor.make_const(1.0)
-        # one =np.float32(1)
-
-        one = Tensor.make_const(1.0)
+        one = Tensor(1.0)
         grad_a = multiply(multiply(out_grad, b), power(a, add_scalar(b, -1)))
-
-
         grad_b = multiply(multiply(out_grad, power(a, b)), log(a))
-
         return grad_a, grad_b
-
-
-
-
 
 def power(a, b):
     return Pow()(a, b)
-
 
 class PowerScalar(Op):
     """Op raise a tensor to an (integer) power."""
@@ -127,8 +116,8 @@ class PowerScalar(Op):
 
     def backward(self, out_grad, node):
         inp = node._inputs[0]
-        one = Tensor.make_const(1.0)
-        grad = multiply(out_grad, multiply(Tensor.make_const(self.scalar), power_scalar(inp, self.scalar - 1)))
+        one = Tensor(1.0)
+        grad = multiply(out_grad, multiply(Tensor(self.scalar), power_scalar(inp, self.scalar - 1)))
         return grad
 
 

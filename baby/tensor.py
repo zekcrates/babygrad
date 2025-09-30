@@ -27,12 +27,14 @@ class Tensor:
         Design decision: requires_grad defaults to True (unlike PyTorch)
         because this is a learning library - we want to see gradients!
         """
-        if isinstance(data, Tensor):
-            self.data = data.data.astype(dtype)
-        elif isinstance(data, np.ndarray):
-            self.data = data.astype(dtype)
+        if isinstance(data, np.ndarray):
+            # If dtype isn't specified, infer it from the input array.
+            # Otherwise, use the specified dtype.
+            self.data = data.astype(dtype if dtype is not None else data.dtype)
         else:
-            self.data = np.array(data, dtype=dtype)
+            # For lists or scalars, default to float32 if not specified.
+            self.data = np.array(data, dtype=dtype if dtype is not None else "float32")
+        
         
         self.grad = None
         self.requires_grad = requires_grad
@@ -191,8 +193,11 @@ class Tensor:
     
     def __mul__(self, other):
         """Multiplication: a * b"""
-        from .ops import Mul
-        return Mul()(self, other)
+        from .ops import Mul, MulScalar
+        if isinstance(other, Tensor):
+            return Mul()(self, other)
+        else:
+            return MulScalar(other)(self)
     
     def __rmul__(self, other):
         """Right multiplication: 5 * tensor"""
@@ -201,42 +206,55 @@ class Tensor:
     def __sub__(self, other):
         """Subtraction: a - b"""
         # a - b = a + (-b)
-        return self.__add__(self.__neg__() if other is self else -other)
+        from .ops import Add, Negate, AddScalar
+        if isinstance(other, Tensor):
+            return Add()(self,Negate()(other))
+        else:
+            return AddScalar(-other)(self)
     
-    def __rsub__(self, other):
-        """Right subtraction: 5 - tensor"""
-        from .ops import Add, Negate
-        return Add()(Tensor(other, requires_grad=False), Negate()(self))
+    
     
     def __truediv__(self, other):
         """Division: a / b"""
-        from .ops import Div
-        return Div()(self, other)
+        from .ops import Div, DivScalar
+        if isinstance(other, Tensor):
+            return Div()(self, other)
+        else:
+            return DivScalar(other)(self)
     
-    def __rtruediv__(self, other):
-        """Right division: 5 / tensor"""
-        from .ops import Div
-        return Div()(Tensor(other, requires_grad=False), self)
+    # def __rtruediv__(self, other):
+    #     """Right division: 5 / tensor"""
+    #     from .ops import Div, DivScalar
+    #     if isinstance(other, Tensor):
+    #         return Div()(self, other)
+    #     else:
+    #         return DivScalar(other)(self)
     
-    def __pow__(self, exponent):
+    def __pow__(self,other):
         """Power: a ** n"""
-        from .ops import Pow
-        return Pow(exponent)(self)
+        from .ops import Pow, PowerScalar
+        if isinstance(other, Tensor):
+            return Pow(self, other)
+        else:
+            return PowerScalar(other)(self)
     
     def __neg__(self):
         """Negation: -a"""
         from .ops import Negate
         return Negate()(self)
-    
+    def matmul(self, other):
+        from .ops import MatMul
+        return MatMul()(self, other)
     def __matmul__(self, other):
         """Matrix multiplication: a @ b"""
         from .ops import MatMul
         return MatMul()(self, other)
     
-    def __rmatmul__(self, other):
-        """Right matmul: array @ tensor"""
-        from .ops import MatMul
-        return MatMul()(Tensor(other, requires_grad=False), self)
+    
+    __radd__ = __add__
+    __rmul__ = __mul__  
+    __rsub__ = __sub__
+    __rmatmul__ = __matmul__
     
     # ========================================
     # TENSOR OPERATIONS (METHODS)
