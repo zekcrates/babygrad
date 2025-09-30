@@ -15,3 +15,27 @@ e.backward()
 print(e.grad)
 
 ```
+
+# Setup 
+
+```r
+git clone <REPO>
+cd <REPO>#
+
+#Create virtual environment
+#we use uv 
+
+uv pip install numpy pytest 
+```
+
+# Tests
+
+```r
+  wsl2/linux 
+PYTHONPATH=. uv run pytest 
+
+# windows 
+$env:PYTHONPATH="."   
+uv run pytest 
+```
+
