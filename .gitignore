@@ -4,3 +4,5 @@ data/
 fun.py
 __pycache__/
 baby/__pycache__/
+__pycache__
+baby/__pycache__

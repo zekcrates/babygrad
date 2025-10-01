@@ -58,11 +58,8 @@ class Tensor:
                 topo_order.append(node)
         build_topo(self)
         
-        # This dictionary will hold the gradient TENSOR for every node
         grads = {}
         
-        # NEEDLE-STYLE: If no gradient is provided, default to a tensor of ones
-        # with the same shape as the output. No error for non-scalars.
         if grad is None:
             grads[id(self)] = Tensor(np.ones_like(self.data))
         else:
@@ -91,17 +88,24 @@ class Tensor:
                         else:
                             grads[parent_id] = grads[parent_id] + input_grads[i]
 
+    
+    
     def numpy(self):
         """
-        Return the data as a NumPy array (detached from graph).
-        
-        This creates a copy, so modifications won't affect the tensor.
-        
+        Return the data as a NumPy array (detached from the autograd graph).
+
+        This returns a copy, so modifying the result will not affect the tensor's data.
+
+        Examples:
+            >>> x = Tensor([1, 2, 3])
+            >>> y = x + 1   # y is still a Tensor, part of the graph
+            >>> z = x.numpy() + 1  # z is a NumPy array, not part of the graph
+
         Returns:
-            np.ndarray: Copy of the tensor's data
+            np.ndarray: A copy of the tensor's data as a NumPy array.
         """
         return self.data.copy()
-    
+
     def detach(self):
         """
         Create a new tensor with same data but no gradient tracking.
@@ -117,7 +121,6 @@ class Tensor:
             >>> z = y * 2       # This operation won't be in graph
         """
         return Tensor(self.data, requires_grad=False, dtype=str(self.dtype))
-    
     # ========================================
     # PROPERTIES
     # ========================================
