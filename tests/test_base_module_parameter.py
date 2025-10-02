@@ -5,32 +5,36 @@ from baby.tensor import Tensor
 from baby.nn import Module, Parameter
 
 
+
 class SimpleLayer(Module):
     def __init__(self):
         super().__init__()
         self.weight = Parameter(np.random.randn(5, 5))
 
 class ComplexModel(Module):
-    
+   
     def __init__(self):
         super().__init__()
-        # 1. A direct parameter
         self.p_direct = Parameter(np.random.randn(10))
+        
         self.layer_direct = SimpleLayer()
+        
         self.layer_list = [SimpleLayer(), SimpleLayer()]
+        
         self.layer_dict = {"a": SimpleLayer(), "b": SimpleLayer()}
         
         self.not_a_parameter = Tensor(np.random.randn(3, 3))
+
+        
         self.shared_param = self.layer_direct.weight
 
 
 def test_parameter_discovery():
-    """
-    Tests that the .parameters() method correctly finds all unique, nested parameters.
-    """
+    
     model = ComplexModel()
-
     params = model.parameters()
+
+
     assert len(params) == 6, "Incorrect number of unique parameters found."
 
     expected_param_ids = {
@@ -48,9 +52,7 @@ def test_parameter_discovery():
 
 
 def test_train_eval_mode_switching():
-    """
-    Tests that .train() and .eval() modes are correctly cascaded to all submodules.
-    """
+   
     model = ComplexModel()
     
     all_modules = [

@@ -27,7 +27,11 @@ class Tensor:
         Design decision: requires_grad defaults to True (unlike PyTorch)
         because this is a learning library - we want to see gradients!
         """
-        if isinstance(data, np.ndarray):
+        if isinstance(data, Tensor):
+            if dtype is None:
+                dtype = data.dtype
+            self.data = data.data.copy().astype(dtype)
+        elif isinstance(data, np.ndarray):
             # If dtype isn't specified, infer it from the input array.
             # Otherwise, use the specified dtype.
             self.data = data.astype(dtype if dtype is not None else data.dtype)
