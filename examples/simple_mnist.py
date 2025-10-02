@@ -6,7 +6,7 @@ import struct
 import gzip
 import numpy as np
 from baby import Tensor, ops
-from baby.optim import SGD 
+from baby.optim import SGD , Adam
 
 def parse_mnist(image_filename, label_filename):
     """
@@ -80,8 +80,8 @@ def train_epoch(model: SimpleNN, optimizer: SGD, X_train: np.ndarray, y_train: n
         print(f"  Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f}, Accuracy = {acc*100:.2f}%")
 
 if __name__ == "__main__":
-    EPOCHS = 10
-    LEARNING_RATE = 0.1
+    EPOCHS = 20
+    LEARNING_RATE = 0.001
     BATCH_SIZE = 128
     NUM_STEPS_TO_RUN = 20
     NUM_SAMPLES = BATCH_SIZE * NUM_STEPS_TO_RUN
@@ -99,7 +99,8 @@ if __name__ == "__main__":
 
     np.random.seed(42)
     model = SimpleNN(INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES)
-    optimizer = SGD(params=model.parameters(), lr=LEARNING_RATE) 
+    # optimizer = SGD(params=model.parameters(), lr=LEARNING_RATE) 
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE) 
 
     for epoch in range(EPOCHS):
         print(f"--- Epoch {epoch+1}/{EPOCHS} ---")
