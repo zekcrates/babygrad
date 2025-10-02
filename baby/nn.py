@@ -1,80 +1,120 @@
-from .tensor import Tensor 
-from .ops import * 
+from .tensor import Tensor
+
 
 class Parameter(Tensor):
     """
-    A special kind of Tensor that is registered as a model parameter.
+    A special Tensor that tells a Module it is a learnable parameter.
 
-    When you assign a Parameter to an attribute of a Module, it is
-    automatically added to the Module's list of parameters, and will
-    be returned by the `parameters()` method.
+    Think of this as a regular Tensor that has been "marked" as a weight or
+    bias that should be updated by the optimizer during training. When you
+    create a model, you should wrap all learnable tensors (like the weights
+    and biases of a linear layer) in this class.
+
+    Example:
+        >>> # A regular tensor attribute - will be ignored by model.parameters()
+        >>> self.some_data = Tensor([1, 2, 3])
+        >>>
+        >>> # A parameter - will be found and trained by the optimizer!
+        >>> self.weights = Parameter(Tensor.randn(10, 5))
     """
     pass
+
+def _get_parameters(obj) -> list[Parameter]:
+    """
+    A simple recursive function that finds all Parameter objects within any given
+    object by searching through its attributes, lists, tuples, and dicts.
+    """
+    params = []
+    
+    if isinstance(obj, Parameter):
+        return [obj]
+    
+    if isinstance(obj, Module):
+        return obj.parameters()
+
+    if isinstance(obj, dict):
+        for value in obj.values():
+            params.extend(_get_parameters(value))
+
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            params.extend(_get_parameters(item))
+
+    return params
+
+def _get_modules(obj) -> list['Module']:
+    """
+    A simple recursive function that finds all Module objects within any given
+    object by searching through its attributes, lists, tuples, and dicts.
+    """
+    modules = []
+    
+    if isinstance(obj, Module):
+        return [obj]
+        
+    if isinstance(obj, dict):
+        for value in obj.values():
+            modules.extend(_get_modules(value))
+
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            modules.extend(_get_modules(item))
+
+    return modules
 
 
 class Module:
     """
     The base class for all neural network modules (layers).
-
-    Your models should also subclass this class. Modules can contain
-    other Modules, allowing you to nest them in a tree structure.
-    Ex: Linear(Module), Flatten(Module), Relu(Module)...
-
-    You can assign Module instances as regular attributes:
-
-    import baby.nn as nn
-    
-    class BabyModel(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.layer1 = nn.Linear(10, 20)
-            self.layer2 = nn.Linear(20, 5)
-
-        def forward(self, x):
-            x = self.layer1(x)
-            x = ops.relu(x)
-            x = self.layer2(x)
-            return x
     """
+    def __init__(self):
+        self.training = True
+
+    def parameters(self) -> list[Parameter]:
+        """
+        Returns a list of all parameters in the module and its submodules.
+        """
+        params = _get_parameters(self.__dict__)        
+        unique_params = []
+        seen_ids = set()
+        for p in params:
+            if id(p) not in seen_ids:
+                unique_params.append(p)
+                seen_ids.add(id(p))
+        return unique_params
+
+    def train(self):
+        """Sets this module and all its submodules to training mode."""
+        self.training = True
+        # Find all child modules and recursively call train() on them.
+        for m in _get_modules(self.__dict__):
+            m.train()
+
+    def eval(self):
+        """Sets this module and all its submodules to evaluation mode."""
+        self.training = False
+        # Find all child modules and recursively call eval() on them.
+        for m in _get_modules(self.__dict__):
+            m.eval()
+
+    def forward(self, *args, **kwargs):
+        """
+        Defines the computation performed at every call.
+        Should be overridden by all subclasses.
+        """
+        raise NotImplementedError
+
     def __call__(self, *args, **kwargs):
         """
-        Makes the module callable (e.g., `model(input_data)`).
-        This automatically calls the `forward` method.
-        """
+        Makes the module callable like a function.
 
+        This is a Python "magic method" that allows you to treat your module
+        instance as a function. It automatically calls the `forward` method
+        that you defined.
+
+        Example:
+            >>> model = MyModel(10, 2)
+            >>> input_tensor = Tensor.randn(64, 10)
+            >>> output = model(input_tensor)  # This calls model.forward(input_tensor)
+        """
         return self.forward(*args, **kwargs)
-    
-    def forward(self, *args, **kwargs):
-        raise NotImplementedError
-    def parameters(self):
-        """
-        Returns a list of all Parameter objects in the module and its submodules.
-        """
-        return _get_params(self.__dict__)
-    
-def _get_params(value):
-    """ 
-        Returns all Parameter Objects.
-    """
-    if isinstance(value, Parameter):
-        return [value]
-    
-    params = []
-
-    if isinstance(value, Module):
-        params +=  value.parameters()
-    
-    elif isinstance(value, dict):
-        for v in value.values():
-            params += _get_params(v)
-
-    elif isinstance(value, (list, tuple)):
-        for v in value:
-            params+= _get_params(v)
-
-    return params
-
- 
-    
-
-    
