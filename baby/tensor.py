@@ -225,14 +225,6 @@ class Tensor:
         else:
             return DivScalar(other)(self)
     
-    # def __rtruediv__(self, other):
-    #     """Right division: 5 / tensor"""
-    #     from .ops import Div, DivScalar
-    #     if isinstance(other, Tensor):
-    #         return Div()(self, other)
-    #     else:
-    #         return DivScalar(other)(self)
-    
     def __pow__(self,other):
         """Power: a ** n"""
         from .ops import Pow, PowerScalar
@@ -323,32 +315,34 @@ class Tensor:
 
     # basic initializers 
     @classmethod
-    def rand(cls, *shape, low=0.0, high=1.0, dtype="float32", requires_grad=False):
+    def rand(cls, *shape, low=0.0, high=1.0, dtype="float32", requires_grad=True):
         """Generate random numbers uniform between low and high"""
         array = np.random.rand(*shape) * (high - low) + low
         return cls(array.astype(dtype), requires_grad=requires_grad)
 
     @classmethod
-    def randn(cls, *shape, mean=0.0, std=1.0, dtype="float32", requires_grad=False):
+    def randn(cls, *shape, mean=0.0, std=1.0, dtype="float32", requires_grad=True):
         """Generate random normal with specified mean and std deviation"""
         array = np.random.randn(*shape) * std + mean
         return cls(array.astype(dtype), requires_grad=requires_grad)
 
     @classmethod
-    def constant(cls, *shape, c=1.0, dtype="float32", requires_grad=False):
+    def constant(cls, *shape, c=1.0, dtype="float32", requires_grad=True):
         """Generate a constant Tensor"""
         array = np.ones(*shape) * c
         return cls(array.astype(dtype), requires_grad=requires_grad)
 
     @classmethod
-    def ones(cls, *shape, dtype="float32", requires_grad=False):
+    def ones(cls, *shape, dtype="float32", requires_grad=True):
         """Generate an all-ones Tensor"""
         return cls.constant(*shape, c=1.0, dtype=dtype, requires_grad=requires_grad)
 
     @classmethod
-    def zeros(cls, *shape, dtype="float32", requires_grad=False):
+    def zeros(cls, *shape, dtype="float32", requires_grad=True):
         """Generate an all-zeros Tensor"""
         return cls.constant(*shape, c=0.0, dtype=dtype, requires_grad=requires_grad)
+    
+
 
 # ========================================
 # CONVENIENCE FUNCTIONS

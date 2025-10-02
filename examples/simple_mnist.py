@@ -7,7 +7,7 @@ import gzip
 import numpy as np
 from baby import Tensor, ops
 from baby.optim import SGD , Adam
-
+from baby.init import * 
 def parse_mnist(image_filename, label_filename):
     """
     Reads an image and label file in MNIST format.
@@ -27,9 +27,10 @@ def parse_mnist(image_filename, label_filename):
 class SimpleNN:
     """A simple two-layer neural network."""
     def __init__(self, input_size, hidden_size, num_classes):
-        self.W1 = Tensor(np.random.randn(input_size, hidden_size).astype(np.float32) / np.sqrt(hidden_size))
-        self.W2 = Tensor(np.random.randn(hidden_size, num_classes).astype(np.float32) / np.sqrt(num_classes))
-
+        # self.W1 = Tensor(np.random.randn(input_size, hidden_size).astype(np.float32) / np.sqrt(hidden_size))
+        # self.W2 = Tensor(np.random.randn(hidden_size, num_classes).astype(np.float32) / np.sqrt(num_classes))
+        self.W1 = kaiming_normal(input_size, hidden_size)
+        self.W2 = kaiming_normal(hidden_size, num_classes)
     def forward(self, x: Tensor) -> Tensor:
         """Performs the forward pass of the network."""
         z1 = x @ self.W1
