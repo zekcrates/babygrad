@@ -1,14 +1,14 @@
 import math 
 from .tensor import Tensor 
 
-def xavier_uniform(fan_in: int, fan_out: int, gain: float = 1.0):
+def xavier_uniform(fan_in: int, fan_out: int, gain: float = 1.0, **kwargs):
     """
     Xavier uniform initialization.
     Calls Tensor.rand() with the correct bounds.
     """
     a = gain * math.sqrt(6.0 / (fan_in + fan_out))
     return Tensor.rand(fan_in, fan_out, low=-a, high=a)
-def xavier_normal(fan_in: int, fan_out: int, gain: float = 1.0):
+def xavier_normal(fan_in: int, fan_out: int, gain: float = 1.0, **kwargs):
     """
     Xavier normal initialization.
     Calls Tensor.randn() with the correct standard deviation.
@@ -17,7 +17,7 @@ def xavier_normal(fan_in: int, fan_out: int, gain: float = 1.0):
     return Tensor.randn(fan_in, fan_out, mean=0, std=std)
 
 
-def kaiming_uniform(fan_in: int, fan_out: int, nonlinearity: str = "relu"):
+def kaiming_uniform(fan_in: int, fan_out: int, nonlinearity: str = "relu", **kwargs):
     """
     Kaiming uniform initialization.
     Calls Tensor.rand() with the correct bounds.
@@ -26,7 +26,7 @@ def kaiming_uniform(fan_in: int, fan_out: int, nonlinearity: str = "relu"):
     return Tensor.rand(fan_in, fan_out, low=-bound, high=bound)
 
 
-def kaiming_normal(fan_in: int, fan_out: int, nonlinearity: str = "relu"):
+def kaiming_normal(fan_in: int, fan_out: int, nonlinearity: str = "relu", **kwargs):
     """
     Kaiming normal initialization.
     Calls Tensor.randn() with the correct standard deviation.

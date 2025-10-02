@@ -5,7 +5,6 @@ from baby import Tensor, ops
 import numdifftools as nd # Import the new library
 
 
-# tests/conftest.py
 
 
 @pytest.fixture(autouse=True)
