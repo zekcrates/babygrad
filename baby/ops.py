@@ -357,3 +357,31 @@ class ReLU(Op):
 def relu(a):
     return ReLU()(a)
 
+
+
+class Sigmoid(Op):
+    def forward(self, a):
+        out = 1/(1+np.exp(-a))
+        return out 
+    
+    def backward(self, out_grad, node):
+        sigm_oid = node.data 
+        local = sigm_oid * (1-sigm_oid)
+        return out_grad * local 
+    
+
+def sigmoid(x):
+    return Sigmoid()(x) 
+
+
+class Tanh(Op):
+    def forward(self,a):
+        return np.tanh(a)
+    def backward(self, out_grad, node):
+        tan_h = node.data 
+        local = 1- tan_h**2 
+        return out_grad *local 
+    
+
+def tanh(x):
+    return Tanh()(x)

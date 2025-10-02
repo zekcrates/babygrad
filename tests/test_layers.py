@@ -116,3 +116,41 @@ def test_linear_backward():
         return res
     
     numerical_gradient_check(linear_op, x, layer.weight, layer.bias)
+
+
+
+
+
+def test_sigmoid_layer():
+    """Tests the forward and backward pass of the Sigmoid layer."""
+    # Arrange
+    from baby.nn import Sigmoid # Import the new layer
+    layer = Sigmoid()
+    x_np = np.array([[-1., 0., 2.], [0.5, -4., 1.]])
+    x = Tensor(x_np, requires_grad=True)
+    
+    # Act (Forward)
+    output = layer(x)
+    
+    # Assert (Forward)
+    expected_forward = 1 / (1 + np.exp(-x_np))
+    assert np.allclose(output.data, expected_forward), "Sigmoid forward pass is incorrect."
+    
+    # Act & Assert (Backward using our numerical checker)
+    numerical_gradient_check(layer, x)
+
+
+def test_tanh_layer():
+    """Tests the forward and backward pass of the Tanh layer."""
+
+    from baby.nn import Tanh 
+    layer = Tanh()
+    x_np = np.array([[-1., 0., 2.], [0.5, -4., 1.]])
+    x = Tensor(x_np, requires_grad=True)
+    
+    output = layer(x)
+    
+    expected_forward = np.tanh(x_np)
+    assert np.allclose(output.data, expected_forward), "Tanh forward pass is incorrect."
+    
+    numerical_gradient_check(layer, x)

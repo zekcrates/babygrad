@@ -351,6 +351,12 @@ class Tensor:
     def randb(cls, *shape, p=0.5, dtype="float32", requires_grad=True):
         array =np.random.rand(*shape) <=p 
         return cls(array,dtype=dtype, requires_grad=requires_grad )
+    
+    @classmethod 
+    def empty(cls, *shape, dtype="float32", requires_grad=True):
+        array =np.empty(shape,dtype=dtype)
+        return cls(array, requires_grad=requires_grad)
+    
 # ========================================
 # CONVENIENCE FUNCTIONS
 # ========================================

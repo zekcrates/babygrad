@@ -286,3 +286,15 @@ class Linear(Module):
             res += self.bias.broadcast_to(res.shape)
         
         return res
+    
+
+
+
+class Tanh(Module):
+    def forward(self, x: Tensor): 
+        return ops.tanh(x)
+
+class Sigmoid(Module):
+    def forward(self,x: Tensor):
+        return ops.sigmoid(x)
+    

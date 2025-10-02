@@ -103,3 +103,16 @@ def test_combined_ops():
     c = Tensor(np.random.rand(3, 5), requires_grad=True)
     func = lambda x, y, z: ops.relu(x @ y + z)
     numerical_gradient_check(func, a, b, c)
+
+
+
+def test_sigmoid_backward():
+    """Tests the backward pass of the sigmoid function."""
+    # randn gives a good mix of positive and negative inputs
+    a = Tensor(np.random.randn(3, 4), requires_grad=True)
+    numerical_gradient_check(ops.sigmoid, a)
+
+def test_tanh_backward():
+    """Tests the backward pass of the tanh function."""
+    a = Tensor(np.random.randn(3, 4), requires_grad=True)
+    numerical_gradient_check(ops.tanh, a)
