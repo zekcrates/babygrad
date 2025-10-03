@@ -2,7 +2,7 @@ from typing import Optional
 import numpy as np 
 from .tensor import Tensor , NDArray, _ensure_tensor
 
-class Op:
+class Function:
     
     def __call__(self, *inputs):
         tensor_inputs =  [_ensure_tensor(i) for i in inputs]
@@ -28,7 +28,7 @@ class Op:
 
 
 
-class Add(Op):
+class Add(Function):
     def forward(self, a: NDArray, b: NDArray):
         return a + b
 
@@ -40,7 +40,7 @@ def add(a, b):
     return Add()(a, b)
 
 
-class AddScalar(Op):
+class AddScalar(Function):
     def __init__(self, scalar):
         self.scalar = scalar
 
@@ -55,7 +55,7 @@ def add_scalar(a, scalar):
     return AddScalar(scalar)(a)
 
 
-class Mul(Op):
+class Mul(Function):
     def forward(self, a: NDArray, b: NDArray):
         return a * b
 
@@ -68,7 +68,7 @@ def multiply(a, b):
     return Mul()(a, b)
 
 
-class MulScalar(Op):
+class MulScalar(Function):
     def __init__(self, scalar):
         self.scalar = scalar
 
@@ -85,8 +85,8 @@ def mul_scalar(a, scalar):
 
 
 
-class Pow(Op):
-    """Op to element-wise raise a tensor to a power."""
+class Pow(Function):
+    """Function to element-wise raise a tensor to a power."""
 
     def forward(self, a: NDArray, b: NDArray) -> NDArray:
         return np.pow(a, b)
@@ -105,8 +105,8 @@ class Pow(Op):
 def power(a, b):
     return Pow()(a, b)
 
-class PowerScalar(Op):
-    """Op raise a tensor to an (integer) power."""
+class PowerScalar(Function):
+    """Function raise a tensor to an (integer) power."""
 
     def __init__(self, scalar: int):
         self.scalar = scalar
@@ -126,8 +126,8 @@ def power_scalar(a, scalar):
     return PowerScalar(scalar)(a)
 
 
-class Div(Op):
-    """Op to element-wise divide two nodes."""
+class Div(Function):
+    """Function to element-wise divide two nodes."""
 
     def forward(self, a, b):
         return a/b
@@ -144,7 +144,7 @@ def divide(a, b):
     return Div()(a, b)
 
 
-class DivScalar(Op):
+class DivScalar(Function):
     def __init__(self, scalar):
         self.scalar = scalar
 
@@ -159,7 +159,7 @@ def divide_scalar(a, scalar):
     return DivScalar(scalar)(a)
 
 
-class Transpose(Op):
+class Transpose(Function):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
 
@@ -183,7 +183,7 @@ def transpose(a, axes=None):
     return Transpose(axes)(a)
 
 
-class Reshape(Op):
+class Reshape(Function):
     def __init__(self, shape):
         self.shape = shape
 
@@ -200,7 +200,7 @@ def reshape(a, shape):
     return Reshape(shape)(a)
 
 
-class BroadcastTo(Op):
+class BroadcastTo(Function):
     def __init__(self, shape):
         self.shape = shape
 
@@ -233,7 +233,7 @@ def broadcast_to(a, shape):
     return BroadcastTo(shape)(a)
 
 
-class Summation(Op):
+class Summation(Function):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
 
@@ -262,7 +262,7 @@ class Summation(Op):
 def summation(a, axes=None):
     return Summation(axes)(a)
 
-class MatMul(Op):
+class MatMul(Function):
     def forward(self, a, b):
         return np.matmul(a, b)
 
@@ -293,7 +293,7 @@ def matmul(a, b):
     return MatMul()(a, b)
 
 
-class Negate(Op):
+class Negate(Function):
     def forward(self, a):
         return -a
 
@@ -308,7 +308,7 @@ def negate(a):
     return Negate()(a)
 
 
-class Log(Op):
+class Log(Function):
     def forward(self, a):
         return  np.log(a)
 
@@ -322,7 +322,7 @@ def log(a):
     return Log()(a)
 
 
-class Exp(Op):
+class Exp(Function):
     def forward(self, a):
         return np.exp(a)
 
@@ -336,7 +336,7 @@ def exp(a):
     return Exp()(a)
 
 
-class ReLU(Op):
+class ReLU(Function):
     def forward(self, a):
         ### BEGIN YOUR SOLUTION     
         a = a * (a>0)
@@ -359,7 +359,7 @@ def relu(a):
 
 
 
-class Sigmoid(Op):
+class Sigmoid(Function):
     def forward(self, a):
         out = 1/(1+np.exp(-a))
         return out 
@@ -374,7 +374,7 @@ def sigmoid(x):
     return Sigmoid()(x) 
 
 
-class Tanh(Op):
+class Tanh(Function):
     def forward(self,a):
         return np.tanh(a)
     def backward(self, out_grad, node):
@@ -390,7 +390,7 @@ def tanh(x):
 
 
 
-class LogSoftmax(Op):
+class LogSoftmax(Function):
     def forward(self,a):
         max_a = np.max(a,axis=(1,), keepdims=True)
         shifted_a = a - max_a
@@ -428,7 +428,7 @@ def logsoftmax(a):
 
 
 
-class LogSumExp(Op):
+class LogSumExp(Function):
     def __init__(self, axes):
         self.axes =axes 
     def forward(self,a):
