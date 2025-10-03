@@ -1,13 +1,11 @@
-"""
-A simple example of training a two-layer neural network on MNIST
-using the babygrad library.
-"""
+
 import struct
 import gzip
 import numpy as np
-from baby import Tensor, ops
-from baby.optim import SGD , Adam
-from baby.init import * 
+from baby import Tensor
+from baby.optim import Adam
+from baby.nn import Module, Linear, ReLU, Sequential, SoftmaxLoss
+
 def parse_mnist(image_filename, label_filename):
     """
     Reads an image and label file in MNIST format.
@@ -24,35 +22,8 @@ def parse_mnist(image_filename, label_filename):
     normalized_images = images.astype(np.float32) / 255.0
     return normalized_images, labels
 
-class SimpleNN:
-    """A simple two-layer neural network."""
-    def __init__(self, input_size, hidden_size, num_classes):
-        # self.W1 = Tensor(np.random.randn(input_size, hidden_size).astype(np.float32) / np.sqrt(hidden_size))
-        # self.W2 = Tensor(np.random.randn(hidden_size, num_classes).astype(np.float32) / np.sqrt(num_classes))
-        self.W1 = kaiming_normal(input_size, hidden_size)
-        self.W2 = kaiming_normal(hidden_size, num_classes)
-    def forward(self, x: Tensor) -> Tensor:
-        """Performs the forward pass of the network."""
-        z1 = x @ self.W1
-        a1 = ops.relu(z1)
-        logits = a1 @ self.W2
-        return logits
 
-    def parameters(self):
-        """Returns a list of all model parameters."""
-        return [self.W1, self.W2]
-
-def softmax_loss(logits: Tensor, y_true: Tensor) -> Tensor:
-    """
-    Computes the softmax cross-entropy loss.
-    """
-    batch_size = logits.shape[0]
-    log_sum_exp = ops.log(ops.exp(logits).sum(axes=1))
-    z_y = (logits * y_true).sum(axes=1)
-    loss = log_sum_exp - z_y
-    return loss.sum() / batch_size
-
-def train_epoch(model: SimpleNN, optimizer: SGD, X_train: np.ndarray, y_train: np.ndarray, batch_size: int):
+def train_epoch(model: Module, loss_fn: Module, optimizer: Adam, X_train: np.ndarray, y_train: np.ndarray, batch_size: int):
     """
     Runs a single training epoch for the model.
     """
@@ -62,14 +33,10 @@ def train_epoch(model: SimpleNN, optimizer: SGD, X_train: np.ndarray, y_train: n
         y_batch_np = y_train[i:i+batch_size]
         x_batch = Tensor(x_batch_np)
 
-        logits = model.forward(x_batch)
+        logits = model(x_batch)
 
-        num_classes = logits.shape[1]
-        y_one_hot_np = np.zeros((y_batch_np.shape[0], num_classes), dtype=np.float32)
-        y_one_hot_np[np.arange(y_batch_np.shape[0]), y_batch_np] = 1
-        y_one_hot = Tensor(y_one_hot_np)
-
-        loss = softmax_loss(logits, y_one_hot)
+        
+        loss = loss_fn(logits, y_batch_np)
 
         optimizer.reset_grad()
         loss.backward()
@@ -78,7 +45,7 @@ def train_epoch(model: SimpleNN, optimizer: SGD, X_train: np.ndarray, y_train: n
         preds = logits.data.argmax(axis=1)
         acc = np.mean(preds == y_batch_np)
 
-        print(f"  Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f}, Accuracy = {acc*100:.2f}%")
+        print(f"   Batch {i//batch_size+1:3d}: Loss = {loss.data:.4f}, Accuracy = {acc*100:.2f}%")
 
 if __name__ == "__main__":
     EPOCHS = 20
@@ -99,11 +66,18 @@ if __name__ == "__main__":
     print("Data loaded.\n")
 
     np.random.seed(42)
-    model = SimpleNN(INPUT_SIZE, HIDDEN_SIZE, NUM_CLASSES)
-    # optimizer = SGD(params=model.parameters(), lr=LEARNING_RATE) 
-    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE) 
+    
+    model = Sequential(
+        Linear(INPUT_SIZE, HIDDEN_SIZE),
+        ReLU(),
+        Linear(HIDDEN_SIZE, NUM_CLASSES)
+    )
+    
+    loss_fn = SoftmaxLoss()
+    
+    optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
 
     for epoch in range(EPOCHS):
         print(f"--- Epoch {epoch+1}/{EPOCHS} ---")
-        train_epoch(model, optimizer, X_train, y_train, BATCH_SIZE) 
+        train_epoch(model, loss_fn, optimizer, X_train, y_train, BATCH_SIZE)
         print("-" * 20)
