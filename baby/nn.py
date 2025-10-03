@@ -298,3 +298,9 @@ class Sigmoid(Module):
     def forward(self,x: Tensor):
         return ops.sigmoid(x)
     
+
+class SoftmaxLoss(Module):
+    def forward(self,logits,y):
+        n,k, *_= logits.shape 
+        y_one_hot = Tensor.one_hot(n,k, requires_grad=False)
+        logsumexp = ops.log

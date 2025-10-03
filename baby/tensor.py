@@ -357,6 +357,11 @@ class Tensor:
         array =np.empty(shape,dtype=dtype)
         return cls(array, requires_grad=requires_grad)
     
+    @classmethod 
+    def one_hot(cls,indices,num_classes,device=None, dtype="float32", requires_grad=True):
+        one_hot_array = np.eye(num_classes,dtype=dtype)[np.array(indices,dtype=int)]
+        return cls(one_hot_array,device=device, dtype=dtype,requires_grad=requires_grad)
+        
 # ========================================
 # CONVENIENCE FUNCTIONS
 # ========================================

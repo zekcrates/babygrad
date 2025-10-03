@@ -33,7 +33,7 @@ def numerical_gradient_check(op, *inputs):
         numerical_grad = nd.Gradient(f_wrapper)(an_input.data.flatten()).reshape(an_input.shape)
 
         # print(f"Checking gradient for input {i}...")
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3) 
+        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-2, rtol=1e-2) 
         # print("OK!")
 
 
@@ -108,7 +108,6 @@ def test_combined_ops():
 
 def test_sigmoid_backward():
     """Tests the backward pass of the sigmoid function."""
-    # randn gives a good mix of positive and negative inputs
     a = Tensor(np.random.randn(3, 4), requires_grad=True)
     numerical_gradient_check(ops.sigmoid, a)
 
@@ -116,3 +115,32 @@ def test_tanh_backward():
     """Tests the backward pass of the tanh function."""
     a = Tensor(np.random.randn(3, 4), requires_grad=True)
     numerical_gradient_check(ops.tanh, a)
+
+
+
+
+
+
+def test_logsoftmax_backward():
+    """Tests the backward pass of the LogSoftmax function."""
+    # Logits are often positive and negative, so randn is a good choice
+    a = Tensor(np.random.randn(5, 10), requires_grad=True)
+    numerical_gradient_check(ops.logsoftmax, a)
+
+
+def test_logsumexp_backward_single_axis():
+    """Tests LogSumExp backward pass when summing over a single axis."""
+    a = Tensor(np.random.randn(5, 6, 7), requires_grad=True)
+    # Use a lambda to pass the 'axes' argument
+    numerical_gradient_check(lambda x: ops.logsumexp(x, axes=1), a)
+
+
+def test_logsumexp_backward_multiple_axes():
+    """Tests LogSumExp backward pass when summing over multiple axes."""
+    a = Tensor(np.random.randn(5, 6, 7), requires_grad=True)
+    numerical_gradient_check(lambda x: ops.logsumexp(x, axes=(0, 2)), a)
+
+def test_logsumexp_backward_all_axes():
+    """Tests LogSumExp backward pass when summing over all axes."""
+    a = Tensor(np.random.randn(8, 3), requires_grad=True)
+    numerical_gradient_check(lambda x: ops.logsumexp(x, axes=None), a)

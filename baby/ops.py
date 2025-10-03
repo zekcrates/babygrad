@@ -385,3 +385,92 @@ class Tanh(Op):
 
 def tanh(x):
     return Tanh()(x)
+
+
+
+
+
+class LogSoftmax(Op):
+    def forward(self,a):
+        max_a = np.max(a,axis=(1,), keepdims=True)
+        shifted_a = a - max_a
+        log_sum_exp  = np.log(np.sum(np.exp(shifted_a), axis=(1,), keepdims=True))
+        return shifted_a - log_sum_exp
+    def backward(self,out_grad, node):
+        input_tensor = node._inputs[0] 
+        axes = (1,)  #will change in future 
+        new_shape = list(input_tensor.shape)
+
+        new_shape[1] =1 # the 1st dimensiojn will get squeezed 
+        new_shape = tuple(new_shape)
+
+        sum_out_grad = summation(out_grad, axes=axes)
+        reshaped_sum_out_grad =reshape(sum_out_grad, new_shape)
+        broadcasted_sum_out_grad = broadcast_to(reshaped_sum_out_grad, input_tensor.shape)
+
+        max_val = input_tensor.data.max(axis=axes, keepdims=True)
+        max_tensor = Tensor(max_val, device=input_tensor.device , dtype=input_tensor.dtype)
+
+        neg_max_tensor = negate(max_tensor)
+        shifted = add(input_tensor,  broadcast_to(neg_max_tensor, input_tensor.shape))
+
+        exp_shifted = exp(shifted)
+        sum_exp = summation(exp_shifted,axes=axes)
+        reshaped_sum_exp = reshape(sum_exp, new_shape)
+        softmax_Z = divide(exp_shifted, broadcast_to(reshaped_sum_exp, input_tensor.shape))
+        multiplied_term = multiply(softmax_Z, broadcasted_sum_out_grad)
+        neg_multiplied_term = negate(multiplied_term)
+        return add(out_grad, neg_multiplied_term)
+
+
+def logsoftmax(a):
+    return LogSoftmax()(a)
+
+
+
+class LogSumExp(Op):
+    def __init__(self, axes):
+        self.axes =axes 
+    def forward(self,a):
+        max_a = np.max(a, axis=self.axes, keepdims=True)
+        sub_a = a - max_a
+        exp_sub = np.exp(sub_a)
+        sum_exp = np.sum(exp_sub,axis=self.axes, keepdims=True)
+        log_sum = max_a + np.log(sum_exp)
+
+        return np.squeeze(log_sum, axis=self.axes)
+    def backward(self, out_grad: Tensor, node: Tensor):
+        a = node._inputs[0]
+
+        new_shape = list(a.shape)
+        axes = self.axes
+        if axes is None:
+            axes = tuple(range(len(a.shape)))
+        elif isinstance(axes, int):
+            axes = (axes,)
+
+        for axis in axes:
+            new_shape[axis] = 1
+        new_shape = tuple(new_shape)
+
+        max_a_val = a.data.max(axis=self.axes, keepdims=True)
+        max_a_tensor = Tensor(max_a_val, device=a.device, dtype=a.dtype)
+
+        shifted_a = a - max_a_tensor
+        exp_shifted_a = exp(shifted_a)
+        
+        sum_exp_shifted_a = summation(exp_shifted_a, self.axes)
+        
+        # Reshape the sum for division (same logic as before)
+        reshaped_sum = reshape(sum_exp_shifted_a, new_shape)
+        
+        softmax = divide(exp_shifted_a, broadcast_to(reshaped_sum, a.shape))
+
+        reshaped_out_grad = reshape(out_grad, new_shape)
+        grad = multiply(broadcast_to(reshaped_out_grad, a.shape), softmax)
+        
+        return grad
+    
+
+def logsumexp(a: Tensor, axes: Optional[tuple] = None) -> Tensor:
+    return LogSumExp(axes=axes)(a)
