@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from baby.tensor import Tensor
-from baby.nn import Module, Parameter, Linear, ReLU, Sequential, Dropout, Flatten, Residual
+from baby.nn import Module, Parameter, Linear, ReLU, Sequential, Dropout, Flatten, Residual, SoftmaxLoss
 from baby import init
 from tests.test_ops import numerical_gradient_check
 
@@ -154,3 +154,31 @@ def test_tanh_layer():
     assert np.allclose(output.data, expected_forward), "Tanh forward pass is incorrect."
     
     numerical_gradient_check(layer, x)
+
+
+
+
+
+
+def test_softmax_loss():
+    """Tests the forward and backward pass of the SoftmaxLoss layer."""
+    batch_size, num_classes = 5, 4
+    loss_fn = SoftmaxLoss()
+    
+    logits_np = np.random.randn(batch_size, num_classes).astype(np.float32)
+    logits = Tensor(logits_np, requires_grad=True)
+    
+    y = np.random.randint(num_classes, size=batch_size)
+
+    loss = loss_fn(logits, y)
+    
+    max_logits = np.max(logits_np, axis=1, keepdims=True)
+    exp_logits = np.exp(logits_np - max_logits)
+    sum_exp_logits = np.sum(exp_logits, axis=1)
+    log_sum_exp_np = np.log(sum_exp_logits) + np.squeeze(max_logits)
+    correct_logits = logits_np[np.arange(batch_size), y]
+    expected_loss = np.sum(log_sum_exp_np - correct_logits) / batch_size
+    
+    assert isinstance(loss, Tensor)
+    assert np.allclose(loss.data, expected_loss), "SoftmaxLoss forward pass is incorrect."
+    numerical_gradient_check(lambda l: loss_fn(l, y), logits)
