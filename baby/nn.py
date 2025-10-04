@@ -318,4 +318,66 @@ class SoftmaxLoss(Module):
         h_y = (logits * y_one_hot).sum(axes=(1,))
         
         return (logsumexp_val - h_y).sum() / n
+
+
+class LayerNorm1d(Module):
+    def __init__(self,dim: int, eps: float=1e-5,device=None, dtype="float32"):
+        super().__init__()
+        self.dim = dim 
+        self.eps = eps 
+        self.weight = Parameter(Tensor.ones(dim, dtype=dtype))
+        self.bias = Parameter(Tensor.zeros(dim, dtype="float32"))
     
+    def forward(self,x):
+        mean = ops.summation(x, axes=(1,))/self.dim 
+        mean_reshaped = ops.reshape(mean, (x.shape[0], 1))
+        mean_broadcasted = ops.broadcast_to(mean_reshaped, x.shape)
+
+        x_minus_mean = x - mean_broadcasted
+        var= ops.summation(x_minus_mean**2 , axes=(1,))/self.dim 
+        var_reshaped = ops.reshape(var, (x.shape[0], 1))
+        var_broadcasted = ops.broadcast_to(var_reshaped,x.shape)
+        std = ops.sqrt(var_broadcasted + self.eps)
+        x_hat = x_minus_mean/std 
+
+        weight_reshaped = ops.reshape(self.weight, (1,self.dim))
+        bias_reshaped = ops.reshape(self.bias, (1, self.dim))
+        weight_broadcasted = ops.broadcast_to(weight_reshaped, x.shape)
+        bias_broadcasted = ops.broadcast_to(bias_reshaped, x.shape)
+        out = weight_broadcasted * x_hat + bias_broadcasted
+
+        return out 
+
+
+class BatchNorm1d(Module):
+    def __init__(self, dim: int, eps: float = 1e-5, momentum: float = 0.1, device: Any | None = None, dtype: str = "float32") -> None:
+        super().__init__()
+        self.dim = dim 
+        self.eps = eps 
+        self.momentum = momentum
+        self.weight = Parameter(Tensor.ones(dim, dtype=dtype))
+        self.bias = Parameter(Tensor.zeros(dim,  dtype=dtype))
+        self.running_mean = Tensor.zeros(dim, dtype=dtype)
+        self.running_var = Tensor.ones(dim, dtype=dtype)
+
+    def forward(self, x: Tensor) -> Tensor:
+        if self.training:
+            batch_size = x.shape[0]            
+            mean = ops.summation(x, axes=(0,)) / batch_size
+            var = ops.summation((x - ops.broadcast_to(mean.reshape((1, self.dim)), x.shape))**2, axes=(0,)) / batch_size
+            self.running_mean.data = (1 - self.momentum) * self.running_mean.data + self.momentum * mean.data
+            self.running_var.data = (1 - self.momentum) * self.running_var.data + self.momentum * var.data
+            mean_to_use = mean
+            var_to_use = var
+        else:
+            mean_to_use = self.running_mean
+            var_to_use = self.running_var
+        mean_reshaped = mean_to_use.reshape((1, self.dim))
+        var_reshaped = var_to_use.reshape((1, self.dim))
+        std = ops.sqrt(var_reshaped + self.eps)
+        x_hat = (x - ops.broadcast_to(mean_reshaped, x.shape)) / ops.broadcast_to(std, x.shape)
+        weight_reshaped = self.weight.reshape((1, self.dim))
+        bias_reshaped = self.bias.reshape((1, self.dim))
+        
+        return ops.broadcast_to(weight_reshaped, x.shape) * x_hat + ops.broadcast_to(bias_reshaped, x.shape)
+

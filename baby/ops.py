@@ -474,3 +474,17 @@ class LogSumExp(Function):
 
 def logsumexp(a: Tensor, axes: Optional[tuple] = None) -> Tensor:
     return LogSumExp(axes=axes)(a)
+
+
+
+
+class Sqrt(Function):
+    def forward(self, a):
+        return  np.sqrt(a)
+
+    def backward(self, out_grad, node):
+        a = node._inputs[0]
+        return out_grad / (2 * sqrt(a))
+
+def sqrt(a):
+    return Sqrt()(a)    

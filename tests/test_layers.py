@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 
 from baby.tensor import Tensor
-from baby.nn import Module, Parameter, Linear, ReLU, Sequential, Dropout, Flatten, Residual, SoftmaxLoss
+from baby.nn import BatchNorm1d, LayerNorm1d, Module, Parameter, Linear, ReLU, Sequential, Dropout, Flatten, Residual, SoftmaxLoss
 from baby import init
 from tests.test_ops import numerical_gradient_check
 
@@ -157,9 +157,6 @@ def test_tanh_layer():
 
 
 
-
-
-
 def test_softmax_loss():
     """Tests the forward and backward pass of the SoftmaxLoss layer."""
     batch_size, num_classes = 5, 4
@@ -182,3 +179,101 @@ def test_softmax_loss():
     assert isinstance(loss, Tensor)
     assert np.allclose(loss.data, expected_loss), "SoftmaxLoss forward pass is incorrect."
     numerical_gradient_check(lambda l: loss_fn(l, y), logits)
+
+
+
+
+
+def test_layernorm1d_backward():
+    """Tests the backward pass of the LayerNorm1d layer."""
+    batch_size, dim = 8, 12
+    layer = LayerNorm1d(dim)
+    x = Tensor(np.random.randn(batch_size, dim), requires_grad=True)
+
+    def layernorm1d_op(x, weight, bias):
+        """Replicates the LayerNorm1d forward pass using base ops for gradient checking."""
+        eps = layer.eps
+        
+        mean = x.sum(axes=1) / dim
+        mean_reshaped = mean.reshape((batch_size, 1))
+        x_minus_mean = x - mean_reshaped.broadcast_to(x.shape)
+        
+        var = (x_minus_mean**2).sum(axes=1) / dim
+        var_reshaped = var.reshape((batch_size, 1))
+        
+        std_inv = (var_reshaped.broadcast_to(x.shape) + eps)**-0.5
+        x_hat = x_minus_mean * std_inv
+        
+        return weight.reshape((1, dim)).broadcast_to(x.shape) * x_hat + \
+               bias.reshape((1, dim)).broadcast_to(x.shape)
+
+    numerical_gradient_check(layernorm1d_op, x, layer.weight, layer.bias)
+
+
+def test_batchnorm1d_forward():
+    """Tests the forward pass logic for both train and eval modes in BatchNorm1d."""
+    dim = 10
+    batch_size = 8
+    momentum = 0.2
+    eps = 1e-5
+
+    layer = BatchNorm1d(dim, eps=eps, momentum=momentum)
+    x_np = np.random.randn(batch_size, dim).astype(np.float32)
+    x = Tensor(x_np)
+
+    layer.eval()
+    running_mean_np = np.random.randn(dim).astype(np.float32)
+    running_var_np = np.random.rand(dim).astype(np.float32)  # Must be positive
+    layer.running_mean.data = running_mean_np
+    layer.running_var.data = running_var_np
+
+    output_eval = layer(x)
+    
+    expected_x_hat_eval = (x_np - running_mean_np) / np.sqrt(running_var_np + eps)
+    expected_output_eval = layer.weight.data * expected_x_hat_eval + layer.bias.data
+    
+    assert np.allclose(output_eval.data, expected_output_eval), "BatchNorm1d eval forward pass is incorrect."
+
+    layer.train()
+    initial_running_mean = layer.running_mean.data.copy()
+    initial_running_var = layer.running_var.data.copy()
+
+    output_train = layer(x)
+    
+    batch_mean_np = x_np.mean(axis=0)
+    batch_var_np = x_np.var(axis=0) # numpy.var with ddof=0 is correct here
+    expected_x_hat_train = (x_np - batch_mean_np) / np.sqrt(batch_var_np + eps)
+    expected_output_train = layer.weight.data * expected_x_hat_train + layer.bias.data
+    
+    assert np.allclose(output_train.data, expected_output_train, atol=1e-6), "BatchNorm1d train forward pass is incorrect."
+
+    expected_running_mean = (1 - momentum) * initial_running_mean + momentum * batch_mean_np
+    expected_running_var = (1 - momentum) * initial_running_var + momentum * batch_var_np
+    
+    assert np.allclose(layer.running_mean.data, expected_running_mean), "BatchNorm1d running_mean update is incorrect."
+    assert np.allclose(layer.running_var.data, expected_running_var), "BatchNorm1d running_var update is incorrect."
+
+
+def test_batchnorm1d_backward():
+    batch_size, dim = 16, 10
+    layer = BatchNorm1d(dim)
+    layer.train() 
+    
+    x = Tensor(np.random.randn(batch_size, dim), requires_grad=True)
+
+    def batchnorm1d_op(x, weight, bias):
+        eps = layer.eps
+        
+        mean = x.sum(axes=0) / batch_size
+        mean_reshaped = mean.reshape((1, dim))
+        x_minus_mean = x - mean_reshaped.broadcast_to(x.shape)
+        
+        var = (x_minus_mean**2).sum(axes=0) / batch_size
+        var_reshaped = var.reshape((1, dim))
+        std_inv = (var_reshaped.broadcast_to(x.shape) + eps)**-0.5
+        x_hat = x_minus_mean * std_inv
+        
+        return weight.reshape((1, dim)).broadcast_to(x.shape) * x_hat + \
+               bias.reshape((1, dim)).broadcast_to(x.shape)
+
+    numerical_gradient_check(batchnorm1d_op, x, layer.weight, layer.bias)
