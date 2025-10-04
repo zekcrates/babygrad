@@ -4,7 +4,7 @@ import gzip
 import numpy as np
 from baby import Tensor
 from baby.optim import Adam
-from baby.nn import Module, Linear, ReLU, Sequential, SoftmaxLoss
+from baby.nn import Module, Linear, ReLU, Sequential, SoftmaxLoss, LayerNorm1d, BatchNorm1d
 
 def parse_mnist(image_filename, label_filename):
     """
@@ -69,6 +69,7 @@ if __name__ == "__main__":
     
     model = Sequential(
         Linear(INPUT_SIZE, HIDDEN_SIZE),
+        BatchNorm1d(HIDDEN_SIZE),
         ReLU(),
         Linear(HIDDEN_SIZE, NUM_CLASSES)
     )
