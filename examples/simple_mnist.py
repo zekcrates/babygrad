@@ -5,23 +5,7 @@ import numpy as np
 from baby import Tensor
 from baby.optim import Adam
 from baby.nn import Module, Linear, ReLU, Sequential, SoftmaxLoss, LayerNorm1d, BatchNorm1d
-
-def parse_mnist(image_filename, label_filename):
-    """
-    Reads an image and label file in MNIST format.
-    """
-    with gzip.open(image_filename, 'rb') as f:
-        magic, num_images, rows, cols = struct.unpack('>IIII', f.read(16))
-        image_data = np.frombuffer(f.read(), dtype=np.uint8)
-        images = image_data.reshape(num_images, rows * cols)
-
-    with gzip.open(label_filename, "rb") as f:
-        magic, num_labels = struct.unpack('>II', f.read(8))
-        labels = np.frombuffer(f.read(), dtype=np.uint8)
-
-    normalized_images = images.astype(np.float32) / 255.0
-    return normalized_images, labels
-
+from baby.data import parse_mnist
 
 def train_epoch(model: Module, loss_fn: Module, optimizer: Adam, X_train: np.ndarray, y_train: np.ndarray, batch_size: int):
     """

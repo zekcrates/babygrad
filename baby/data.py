@@ -1,8 +1,12 @@
 import numpy as np
-from .tensor import Tensor
 
+from baby.utils import parse_mnist
+from .tensor import Tensor
+from typing import List, Optional
+import gzip 
+import struct 
 class Dataset:
-    """An abstract class representing a dataset.
+    """An Base class representing a dataset.
 
     This is the base class for all datasets. Your own custom dataset should
     inherit from this class and at least override the `__len__` method
@@ -109,3 +113,45 @@ class DataLoader:
         batch = tuple(Tensor(arr) for arr in all_arrays)
         self.batch_idx += 1
         return batch
+    
+
+class MNISTDataset(Dataset):
+    def __init__(
+        self,
+        image_filename: str,
+        label_filename: str,
+        transforms: Optional[List] = None,
+    ):
+        self.images, self.labels = parse_mnist(image_filesname=image_filename, label_filename=label_filename) 
+        self.transforms = transforms
+
+
+    def __getitem__(self, index) -> object:
+        if isinstance(index, slice):
+            #lets take [0:5]
+            #self.images[0:5]
+            # we get back (5,28,28)
+            
+            images_batch_flat = np.array(self.images[index], dtype=np.float32)
+            
+            
+            images_batch_reshaped = images_batch_flat.reshape(-1, 28, 28, 1)
+            #we convert into # (5,28,28,1)
+            
+            labels_batch = np.array(self.labels[index])
+            return (images_batch_reshaped, labels_batch)
+        
+        else:  #single index , return directly 
+            sample_image = self.images[index]
+            sample_label = self.labels[index]
+            
+            np_sample_image = np.array(sample_image, dtype=np.float32).reshape(28, 28, 1)
+            np_sample_label = np.array(sample_label)
+
+            if self.transforms is not None:
+                for tform in self.transforms:
+                    np_sample_image = tform(np_sample_image)
+
+            return (np_sample_image, np_sample_label)
+    def __len__(self) -> int:
+        return len(self.images)
