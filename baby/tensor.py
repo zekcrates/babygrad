@@ -14,7 +14,7 @@ class Tensor:
     operations for computing gradients automatically.
     """
     
-    def __init__(self, data, *, device=None, dtype="float32", requires_grad=True):
+    def __init__(self, data, *, device=None, dtype="float32", requires_grad=False):
         """
         Create a new tensor.
         

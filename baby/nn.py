@@ -19,7 +19,10 @@ class Parameter(Tensor):
         >>> # A parameter - will be found and trained by the optimizer!
         >>> self.weights = Parameter(Tensor.randn(10, 5))
     """
-    pass
+    def __init__(self, data, *args, **kwargs):
+        # Parameters always require gradients.
+        kwargs['requires_grad'] = True
+        super().__init__(data, *args, **kwargs)
 
 def _get_parameters(obj) -> list[Parameter]:
     """
@@ -381,3 +384,36 @@ class BatchNorm1d(Module):
         
         return ops.broadcast_to(weight_reshaped, x.shape) * x_hat + ops.broadcast_to(bias_reshaped, x.shape)
 
+
+
+class Embedding(Module):
+    """
+    A simple lookup table that stores embeddings of a fixed dictionary and size.
+
+    This module is often used to store word embeddings and retrieve them using
+    indices. The input to the module is a list of indices, and the output
+    is the corresponding word embeddings.
+
+    Args:
+        num_embeddings (int): The size of the dictionary of embeddings.
+        embedding_dim (int): The size of each embedding vector.
+
+    Example:
+        >>> # An embedding module for a dictionary of 10 words, each with a 3-dim vector
+        >>> embedding = nn.Embedding(10, 3)
+        >>> # Input is a Tensor of integer indices
+        >>> input_indices = Tensor([1, 4, 9, 2])
+        >>> output = embedding(input_indices)
+        >>> print(output.shape)
+        (4, 3)
+    """
+    def __init__(self, num_embeddings: int, embeddings_dim: int ):
+        super().__init__()
+        self.num_embeddings = num_embeddings
+        self.embeddings_dim = embeddings_dim
+        self.weight =Parameter(init.kaiming_uniform(num_embeddings, embeddings_dim))
+    
+    def forward(self, x ):
+        embedded_data = self.weight.data[x.data.astype(int)]
+        return Tensor(embedded_data)
+    
