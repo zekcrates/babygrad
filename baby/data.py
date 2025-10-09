@@ -108,7 +108,10 @@ class DataLoader:
         batch_indices = self.indices[start: start+self.batch_size]
         samples = [self.dataset[i] for i in batch_indices]
 
-        all_arrays = [np.stack(s) for s in samples]
+
+        unzipped_samples = zip(*samples)
+
+        all_arrays = [np.stack(s) for s in unzipped_samples]
 
         batch = tuple(Tensor(arr) for arr in all_arrays)
         self.batch_idx += 1
@@ -134,7 +137,7 @@ class MNISTDataset(Dataset):
             
             images_batch_flat = np.array(self.images[index], dtype=np.float32)
             
-            
+            # images_batch_reshaped = images_batch_flat.reshape(len(images_batch_flat), 784)
             images_batch_reshaped = images_batch_flat.reshape(-1, 28, 28, 1)
             #we convert into # (5,28,28,1)
             
@@ -147,6 +150,8 @@ class MNISTDataset(Dataset):
             
             np_sample_image = np.array(sample_image, dtype=np.float32).reshape(28, 28, 1)
             np_sample_label = np.array(sample_label)
+            # np_sample_image = np.array(sample_image, dtype=np.float32).reshape(784)
+            # np_sample_label = np.array(sample_label)
 
             if self.transforms is not None:
                 for tform in self.transforms:

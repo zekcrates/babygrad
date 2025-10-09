@@ -359,7 +359,8 @@ class Tensor:
     
     @classmethod 
     def one_hot(cls,indices,num_classes,device=None, dtype="float32", requires_grad=True):
-        one_hot_array = np.eye(num_classes,dtype=dtype)[np.array(indices,dtype=int)]
+
+        one_hot_array = np.eye(num_classes,dtype=dtype)[np.array(indices.data,dtype=int)]
         return cls(one_hot_array,device=device, dtype=dtype,requires_grad=requires_grad)
         
 # ========================================
