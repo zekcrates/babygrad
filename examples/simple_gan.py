@@ -64,4 +64,6 @@ discriminator_model = nn.Sequential(
 loss_d = nn.SoftmaxLoss()
 generator_opt = baby.optim.Adam(generator_model.parameters() , lr=0.01)
 discriminator_opt = baby.optim.Adam(discriminator_model.parameters() , lr=0.01)
+data = np.random.normal(0, 1, (3200, 2)) 
 
+train_gan(data, 32, 3000)
