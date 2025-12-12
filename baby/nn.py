@@ -182,7 +182,7 @@ class Module:
         with open(filename , 'wb') as f :
             pickle.dump(self.state_dict(), f)
 
-    
+
 class ReLU(Module):
     """
     Applies the Rectified Linear Unit (ReLU) function element-wise.
@@ -380,6 +380,16 @@ class SoftmaxLoss(Module):
         
         return (logsumexp_val - h_y).sum() / n
 
+
+class MSELoss(Module):
+    def forward(self, pred, target):
+        """
+        Calculates the Mean Squared Error.
+        Args:
+            pred: Tensor of shape (batch_size, output_dim)
+            target: Tensor of shape (batch_size, output_dim)
+        """
+        return ((pred - target) ** 2).mean()
 
 class LayerNorm1d(Module):
     def __init__(self,dim: int, eps: float=1e-5,device=None, dtype="float32"):

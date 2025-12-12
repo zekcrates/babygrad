@@ -26,7 +26,7 @@ class Optimizer:
         """
         self.params = params
 
-    def reset_grad(self):
+    def zero_grad(self):
         """
         Sets the gradients of all optimized parameters to None.
         This is typically called at the start of each training iteration.
