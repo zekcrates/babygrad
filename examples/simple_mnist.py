@@ -54,10 +54,10 @@ def evaluate(model: Module, X_test: np.ndarray, y_test: np.ndarray, batch_size: 
         
     return total_acc / total_count
 if __name__ == "__main__":
-    EPOCHS = 20
+    EPOCHS = 1
     LEARNING_RATE = 0.001
     BATCH_SIZE = 128
-    NUM_STEPS_TO_RUN = 20
+    NUM_STEPS_TO_RUN = 2
     # NUM_SAMPLES = BATCH_SIZE * NUM_STEPS_TO_RUN
     INPUT_SIZE = 784
     HIDDEN_SIZE = 100
@@ -93,3 +93,28 @@ if __name__ == "__main__":
 
         print(f"--- Epoch {epoch+1}/{EPOCHS} --- Test Accuracy = {test_acc*100:.2f}% ---")
         print("-" * 20)
+
+
+
+    
+    model.load("simple_mnist.pt")
+    print(model.state_dict())
+
+
+
+
+
+
+
+    # print("-------------------------------------------------------------------------")
+
+
+    # for epoch in range(EPOCHS):
+        
+    #     model.train()
+    #     train_epoch(model, loss_fn, optimizer, X_train, y_train, BATCH_SIZE)
+
+    #     test_acc = evaluate(model, X_test, y_test, BATCH_SIZE)
+
+    #     print(f"--- Epoch {epoch+1}/{EPOCHS} --- Test Accuracy = {test_acc*100:.2f}% ---")
+    #     print("-" * 20)

@@ -2,7 +2,7 @@ from typing import Any
 from baby import init, ops
 from .tensor import Tensor
 import numpy as np 
-
+import pickle 
 class Parameter(Tensor):
     """
     A special Tensor that tells a Module it is a learnable parameter.
@@ -123,8 +123,66 @@ class Module:
             >>> output = model(input_tensor)  # This calls model.forward(input_tensor)
         """
         return self.forward(*args, **kwargs)
+    
+
+    def state_dict(self):
+        state_dic ={}
+        for key,value in self.__dict__.items():
+            if isinstance(value, Tensor) or isinstance(value, Parameter):
+                state_dic[key] = value.data
+            elif isinstance(value, Module):
+                child_sd =value.state_dict()
+                for k,v in child_sd.items():
+                    state_dic[f"{key}.{k}"] = v
 
 
+            elif isinstance(value, (list, tuple)):
+                for i, item in enumerate(value):
+                    if isinstance(item, Module):
+                        child_sd = item.state_dict()
+                        for k, v in child_sd.items():
+                            state_dic[f"{key}.{i}.{k}"] = v
+        return state_dic    
+    def load_state_dict(self,state_dict):
+            for key,value in self.__dict__.items():
+                if isinstance(value, Parameter) or isinstance(value,Tensor):
+                    if key in state_dict:
+
+                        if (value.shape != state_dict[key].shape):
+                            raise ValueError(f"Shape mismatch for {key}: expected {value.shape}, got {state_dict[key].shape}")
+                        value.data = state_dict[key]
+                 
+                elif isinstance(value, Module):
+                    prefix = f"{key}."
+                    child_sd = {
+                        k[len(prefix):]: v 
+                        for k, v in state_dict.items() 
+                        if k.startswith(prefix)
+                    }
+                    value.load_state_dict(child_sd)
+
+                elif isinstance(value, (list, tuple)):
+                    for i, item in enumerate(value):
+                        if isinstance(item, Module):
+                            prefix = f"{key}.{i}."
+                            child_sd = {
+                                k[len(prefix):]: v 
+                                for k, v in state_dict.items() 
+                                if k.startswith(prefix)
+                            }
+                            item.load_state_dict(child_sd)
+
+
+                
+    def load(self, filename):
+        with open(filename,'rb') as f:
+            self.load_state_dict(pickle.load(f))
+
+    def save(self,filename):
+        with open(filename , 'wb') as f :
+            pickle.dump(self.state_dict(), f)
+
+    
 class ReLU(Module):
     """
     Applies the Rectified Linear Unit (ReLU) function element-wise.
