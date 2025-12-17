@@ -76,10 +76,9 @@ from baby import Tensor
 from baby.optim import Adam
 from baby.nn import Dropout, Flatten, Linear, ReLU, Sequential, SoftmaxLoss, BatchNorm1d
 from baby.data import MNISTDataset, DataLoader
-from baby.trainer import Trainer  # <--- The new import
+from baby.trainer import Trainer  
 
 if __name__ == "__main__":
-    # --- Configuration ---
     EPOCHS = 5
     LEARNING_RATE = 0.001
     BATCH_SIZE = 128
@@ -87,9 +86,7 @@ if __name__ == "__main__":
     HIDDEN_SIZE = 100
     NUM_CLASSES = 10
 
-    # --- Data Loading ---
     print("Loading MNIST data via Dataset...")
-    # Your Dataset/DataLoader implementation is perfect for the Trainer
     train_dataset = MNISTDataset("data/train-images-idx3-ubyte.gz", "data/train-labels-idx1-ubyte.gz")
     test_dataset = MNISTDataset("data/t10k-images-idx3-ubyte.gz", "data/t10k-labels-idx1-ubyte.gz")
 
@@ -97,7 +94,6 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
     print("Data loaded.\n")
 
-    # --- Model Setup ---
     np.random.seed(42)
     model = Sequential(
         Flatten(),

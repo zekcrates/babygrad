@@ -488,3 +488,18 @@ class Sqrt(Function):
 
 def sqrt(a):
     return Sqrt()(a)    
+
+
+
+class Flip(Function):
+    def __init__(self, axes=None):
+        self.axes = axes 
+    def compute(self,a):
+        return a.flip(self.axes)
+    def gradient(self,out_grad,node):
+        return flip(out_grad,self.axes)
+    
+
+
+def flip(a, axes):
+    return Flip(axes)(a)
