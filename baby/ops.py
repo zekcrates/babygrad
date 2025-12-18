@@ -495,11 +495,121 @@ class Flip(Function):
     def __init__(self, axes=None):
         self.axes = axes 
     def compute(self,a):
-        return a.flip(self.axes)
+        return np.flip(self.axes)
     def gradient(self,out_grad,node):
         return flip(out_grad,self.axes)
     
-
-
 def flip(a, axes):
     return Flip(axes)(a)
+
+
+class Dilate(Function):
+    def __init__(self,axes, dilation ):
+        self.axes = axes 
+        self.dilation = dilation
+
+    def compute(self, a):
+        new_shape = list(a.shape)
+        slices = [slice(None)] * a.ndim 
+        for axis in self.axes:
+            new_shape[axis] = a.shape[axis] * (self.dilation + 1)
+            slices[axis] = slice(0,new_shape[axis], self.dilation+1)
+
+        out = np.zeros(tuple(new_shape),dtype=a.dtype)
+        out[tuple(slices)] = a 
+        return out 
+    def gradient(self,out_grad, node):
+        return undilate(out_grad, self.axes, self.dilation)
+        
+
+def dilate(a, axes, dilation=1):
+    return Dilate(axes, dilation)(a)
+
+
+class Undilate(Function):
+    def __init__(self, axes: tuple[int, ...], dilation: int):
+        self.axes = axes
+        self.dilation = dilation
+
+    def compute(self, a):
+        slices = [slice(None)] * a.ndim
+        for axis in self.axes:
+            slices[axis] = slice(0, None, self.dilation + 1)
+        return a[tuple(slices)]
+
+    def gradient(self, out_grad, node):
+        return dilate(out_grad, self.axes, self.dilation)
+
+def undilate(a, axes, dilation=1):
+    return Undilate(axes, dilation)(a)
+
+
+
+
+class Conv(Function):
+    def __init__(self, stride: Optional[int] = 1, padding: Optional[int] = 0):
+        self.stride = stride
+        self.padding = padding
+
+    def compute(self, A, B):
+        pad = self.padding 
+        stride  = self.stride 
+        
+        if pad  >0:
+            A = A.pad(((0,0), (pad,pad), (pad,pad), (0,0)))
+        
+        N,H,W,C_in = A.shape 
+        K , _,_ ,C_out = B.shape 
+        Ns,Hs,Ws,Cs = A.strides
+
+        H_out = (H - K) // stride + 1
+        W_out = (W - K) // stride + 1
+
+        view_shape = (N, H_out, W_out, K, K, C_in)
+        view_strides = (Ns, Hs * stride, Ws * stride, Hs, Ws, Cs)   
+
+        A_view = A.as_strided(shape=view_shape, strides=view_strides)
+        inner_dim = K* K* C_in
+        A_matrix = A_view.compact().reshape((N* H_out* W_out, inner_dim))
+        B_matrix = B.compact().reshape((inner_dim, C_out))
+        out = A_matrix @ B_matrix
+        return out.reshape((N, H_out, W_out, C_out))
+    
+
+    def gradient(self, out_grad, node):
+        A, B = node.inputs
+        
+        stride = self.stride
+        padding = self.padding
+        
+        N, H, W, C_in = A.shape
+        K, _, _, C_out = B.shape
+        
+        
+        if stride > 1:
+            grad_out_dilated = dilate(out_grad, (1, 2), stride - 1)
+        else:
+            grad_out_dilated = out_grad
+
+        
+        B_transposed = B.transpose((2, 3))
+        
+        B_flipped = flip(B_transposed, (0, 1)) 
+        
+        
+        grad_A_padding = K - 1 - padding
+        grad_A = conv(grad_out_dilated, B_flipped, stride=1, padding=grad_A_padding)
+
+        
+        A_permuted = A.transpose((0, 3))
+        
+        grad_out_permuted = grad_out_dilated.transpose((0, 1)).transpose((1, 2))
+        
+        grad_B_intermediate = conv(A_permuted, grad_out_permuted, stride=1, padding=padding)
+        
+        grad_B = grad_B_intermediate.transpose((0, 1)).transpose((1, 2))
+        
+        return grad_A, grad_B
+
+def conv(a, b, stride=1, padding=1):
+    return Conv(stride, padding)(a, b)
