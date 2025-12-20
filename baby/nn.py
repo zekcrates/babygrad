@@ -371,25 +371,20 @@ class SoftmaxLoss(Module):
             y: A list or numpy array of integers (batch_size,) containing the true class labels.
         """
         n, k = logits.shape
-        
         y_one_hot = Tensor.one_hot(y, k, requires_grad=False)
-        
         logsumexp_val = ops.logsumexp(logits, axes=(1,))
-        
         h_y = (logits * y_one_hot).sum(axes=(1,))
         
         return (logsumexp_val - h_y).sum() / n
 
-
 class MSELoss(Module):
-    def forward(self, pred, target):
+    def forward(self, pred: Tensor, target: Tensor) -> Tensor:
         """
         Calculates the Mean Squared Error.
-        Args:
-            pred: Tensor of shape (batch_size, output_dim)
-            target: Tensor of shape (batch_size, output_dim)
         """
-        return ((pred - target) ** 2).mean()
+        diff = pred - target
+        sq_diff = diff * diff        
+        return sq_diff.sum() / Tensor(target.data.size)
 
 class LayerNorm1d(Module):
     def __init__(self,dim: int, eps: float=1e-5,device=None, dtype="float32"):
@@ -484,4 +479,5 @@ class Embedding(Module):
     def forward(self, x ):
         embedded_data = self.weight.data[x.data.astype(int)]
         return Tensor(embedded_data)
-    
+
+

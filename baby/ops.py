@@ -228,6 +228,35 @@ class BroadcastTo(Function):
         return grad 
     
 
+# class BroadcastTo(Function):
+#     def __init__(self, shape):
+#         self.shape = shape
+
+#     def forward(self, a):
+#         self.input_shape = a.shape
+#         return np.broadcast_to(a, self.shape)
+
+#     def backward(self, out_grad, node):
+#         input_shape = self.input_shape
+#         output_shape = self.shape
+        
+#         # 1. Find axes that were added (rank difference)
+#         # e.g., input (3,) to output (2, 3) -> axis 0 was added
+#         added_dims = len(output_shape) - len(input_shape)
+#         axes_to_sum = list(range(added_dims))
+        
+#         # 2. Find axes that were stretched (1 -> N)
+#         # e.g., input (3, 1) to output (3, 5) -> axis 1 was stretched
+#         for i, (orig, new) in enumerate(zip(input_shape, output_shape[added_dims:])):
+#             if orig == 1 and new > 1:
+#                 axes_to_sum.append(i + added_dims)
+        
+#         # 3. Sum everything at once!
+#         grad = summation(out_grad, axes=tuple(axes_to_sum))
+        
+#         # 4. If we summed away leading dims, the rank is already correct.
+#         # But if we summed middle dims (1 -> N), we need to put the '1' back.
+#         return reshape(grad, input_shape)
 
 def broadcast_to(a, shape):
     return BroadcastTo(shape)(a)
