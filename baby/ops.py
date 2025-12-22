@@ -89,7 +89,7 @@ class Pow(Function):
     """Function to element-wise raise a tensor to a power."""
 
     def forward(self, a: NDArray, b: NDArray) -> NDArray:
-        return np.pow(a, b)
+        return np.power(a, b)
         
     
 
@@ -159,25 +159,20 @@ def divide_scalar(a, scalar):
     return DivScalar(scalar)(a)
 
 
+
 class Transpose(Function):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
-
     def forward(self, a):
-        if self.axes is None :
-                return np.swapaxes(a,-2,-1)
+        if self.axes is None:
+            return np.swapaxes(a, -2, -1)
         else:
-            if(len(self.axes))==2 :
-                a1 , a2 = self.axes 
-                return np.swapaxes(a, a1, a2)
-            else:
-
-                return np.transpose(a, axes=self.axes)
-
+            return np.transpose(a, axes=self.axes)
     def backward(self, out_grad, node):
-        return transpose(out_grad, self.axes)
-        
-
+        if self.axes is None:
+            return transpose(out_grad)
+        inverse_axes = np.argsort(self.axes)
+        return transpose(out_grad, tuple(inverse_axes))
 
 def transpose(a, axes=None):
     return Transpose(axes)(a)
