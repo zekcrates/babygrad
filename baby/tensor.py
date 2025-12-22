@@ -30,7 +30,7 @@ class Tensor:
         if isinstance(data, Tensor):
             if dtype is None:
                 dtype = data.dtype
-            self.data = data.data.copy().astype(dtype)
+            self.data = data.numpy().astype(dtype)
         elif isinstance(data, np.ndarray):
             # If dtype isn't specified, infer it from the input array.
             # Otherwise, use the specified dtype.

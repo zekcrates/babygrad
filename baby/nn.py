@@ -365,7 +365,6 @@ class SoftmaxLoss(Module):
     def forward(self, logits, y):
         """
         Calculates the softmax cross-entropy loss.
-
         Args:
             logits: A tensor of shape (batch_size, num_classes) containing the model's raw output.
             y: A list or numpy array of integers (batch_size,) containing the true class labels.
