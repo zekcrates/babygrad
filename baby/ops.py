@@ -293,20 +293,17 @@ class MatMul(Function):
     def backward(self, out_grad, node):
         a, b = node._inputs
 
-        # If scalar grad (from summation), broadcast to output shape
         if len(out_grad.shape) == 0:
             out_grad = out_grad.broadcast_to(node.shape)
 
         grad_a = matmul(out_grad, transpose(b, axes=(-1, -2)))
         grad_b = matmul(transpose(a, axes=(-1, -2)), out_grad)
 
-        # Reduce extra dims from broadcasting
         while len(grad_a.shape) > len(a.shape):
             grad_a = summation(grad_a, axes=0)
         while len(grad_b.shape) > len(b.shape):
             grad_b = summation(grad_b, axes=0)
 
-        # Match original input shapes
         grad_a = grad_a.reshape(a.shape)
         grad_b = grad_b.reshape(b.shape)
 
