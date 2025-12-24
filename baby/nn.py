@@ -379,7 +379,6 @@ class SoftmaxLoss(Module):
 class MSELoss(Module):
     def forward(self, pred: Tensor, target: Tensor) -> Tensor:
         """
-        Calculates the Mean Squared Error.
         """
         diff = pred - target
         sq_diff = diff * diff        
@@ -398,17 +397,22 @@ class LayerNorm1d(Module):
         mean_reshaped = ops.reshape(mean, (x.shape[0], 1))
         mean_broadcasted = ops.broadcast_to(mean_reshaped, x.shape)
 
+        
         x_minus_mean = x - mean_broadcasted
+
         var= ops.summation(x_minus_mean**2 , axes=(1,))/self.dim 
         var_reshaped = ops.reshape(var, (x.shape[0], 1))
         var_broadcasted = ops.broadcast_to(var_reshaped,x.shape)
+
         std = ops.sqrt(var_broadcasted + self.eps)
         x_hat = x_minus_mean/std 
 
         weight_reshaped = ops.reshape(self.weight, (1,self.dim))
         bias_reshaped = ops.reshape(self.bias, (1, self.dim))
+
         weight_broadcasted = ops.broadcast_to(weight_reshaped, x.shape)
         bias_broadcasted = ops.broadcast_to(bias_reshaped, x.shape)
+
         out = weight_broadcasted * x_hat + bias_broadcasted
 
         return out 

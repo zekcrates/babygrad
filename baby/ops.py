@@ -91,10 +91,6 @@ class Pow(Function):
     def forward(self, a: NDArray, b: NDArray) -> NDArray:
         return np.power(a, b)
         
-    
-
-    
-        
     def backward(self, out_grad, node):
         a, b = node._inputs
         one = Tensor(1.0)
@@ -165,9 +161,20 @@ class Transpose(Function):
         self.axes = axes
     def forward(self, a):
         if self.axes is None:
-            return np.swapaxes(a, -2, -1)
+            return np.swapaxes(a, -1, -2)
+
+        ndim = a.ndim
+
+        axes = tuple(ax if ax >= 0 else ndim + ax for ax in self.axes)
+        if len(axes) == 2:
+            full_axes = list(range(ndim))
+            i, j = axes
+            full_axes[i], full_axes[j] = full_axes[j], full_axes[i]
+            self.full_axes = tuple(full_axes)
         else:
-            return np.transpose(a, axes=self.axes)
+            self.full_axes = axes
+
+        return np.transpose(a, self.full_axes)
     def backward(self, out_grad, node):
         if self.axes is None:
             return transpose(out_grad)
@@ -459,7 +466,7 @@ class LogSumExp(Function):
         sum_exp = np.sum(exp_sub,axis=self.axes, keepdims=True)
         log_sum = max_a + np.log(sum_exp)
 
-        return np.squeeze(log_sum, axis=self.axes)
+        return np.squeeze(log_sum,   axis=self.axes)
     def backward(self, out_grad: Tensor, node: Tensor):
         a = node._inputs[0]
 
@@ -515,9 +522,9 @@ def sqrt(a):
 class Flip(Function):
     def __init__(self, axes=None):
         self.axes = axes 
-    def compute(self,a):
-        return np.flip(self.axes)
-    def gradient(self,out_grad,node):
+    def forward(self,a):
+        return np.flip(a, self.axes)
+    def backward(self,out_grad,node):
         return flip(out_grad,self.axes)
     
 def flip(a, axes):
@@ -529,59 +536,124 @@ class Dilate(Function):
         self.axes = axes 
         self.dilation = dilation
 
-    def compute(self, a):
+    def forward(self, a):
         new_shape = list(a.shape)
         slices = [slice(None)] * a.ndim 
         for axis in self.axes:
-            new_shape[axis] = a.shape[axis] * (self.dilation + 1)
+            new_shape[axis] = a.shape[axis] + (a.shape[axis]-1 )  * (self.dilation )
             slices[axis] = slice(0,new_shape[axis], self.dilation+1)
 
         out = np.zeros(tuple(new_shape),dtype=a.dtype)
         out[tuple(slices)] = a 
         return out 
-    def gradient(self,out_grad, node):
+    def backward(self,out_grad, node):
         return undilate(out_grad, self.axes, self.dilation)
         
 
 def dilate(a, axes, dilation=1):
     return Dilate(axes, dilation)(a)
 
-
 class Undilate(Function):
     def __init__(self, axes: tuple[int, ...], dilation: int):
         self.axes = axes
         self.dilation = dilation
 
-    def compute(self, a):
+    def forward(self, a):
         slices = [slice(None)] * a.ndim
         for axis in self.axes:
             slices[axis] = slice(0, None, self.dilation + 1)
         return a[tuple(slices)]
 
-    def gradient(self, out_grad, node):
-        return dilate(out_grad, self.axes, self.dilation)
+    def backward(self, out_grad, node):
+        # Original input tensor
+        a = node._inputs[0]
+
+        # Allocate gradient with original shape
+        grad = np.zeros(a.shape, dtype=out_grad.dtype)
+
+        # Same slicing pattern as forward
+        slices = [slice(None)] * a.ndim
+        for axis in self.axes:
+            slices[axis] = slice(0, None, self.dilation + 1)
+
+        # Scatter gradients back
+        grad[tuple(slices)] = out_grad.data
+        return np.asarray(grad).copy()
+
 
 def undilate(a, axes, dilation=1):
     return Undilate(axes, dilation)(a)
 
 
 
+class Contiguous(Function):
+    def compute(self, x):
+        return np.ascontiguousarray(x)
 
+    def gradient(self, out_grad):
+
+        return out_grad
+
+def contiguous(x):
+    return Contiguous()(x)
+
+class Slice(Function):
+    def __init__(self, slices):
+        self.slices = slices
+
+    def forward(self, a: np.ndarray):
+        return a[self.slices]
+
+    def backward(self, out_grad, node):
+        a_shape = node._inputs[0].shape
+        # Create a zero gradient of the original shape
+        grad_a = np.zeros(a_shape, dtype=out_grad.dtype)
+        # Place the incoming gradient into the sliced position
+        grad_a[self.slices] = out_grad.data
+        return Tensor(grad_a)
+
+def tensor_slice(a, slices):
+    return Slice(slices)(a)
 class Conv(Function):
     def __init__(self, stride: Optional[int] = 1, padding: Optional[int] = 0):
         self.stride = stride
         self.padding = padding
 
-    def compute(self, A, B):
+    # def compute(self, A, B):
+    #     pad = self.padding 
+    #     stride  = self.stride 
+        
+    #     if pad  >0:
+    #         A = A.pad(((0,0), (pad,pad), (pad,pad), (0,0)))
+        
+    #     N,H,W,C_in = A.shape 
+    #     K , _,_ ,C_out = B.shape 
+    #     Ns,Hs,Ws,Cs = A.strides
+
+    #     H_out = (H - K) // stride + 1
+    #     W_out = (W - K) // stride + 1
+
+    #     view_shape = (N, H_out, W_out, K, K, C_in)
+    #     view_strides = (Ns, Hs * stride, Ws * stride, Hs, Ws, Cs)   
+
+    #     A_view = A.as_strided(shape=view_shape, strides=view_strides)
+    #     inner_dim = K* K* C_in
+    #     A_matrix = A_view.compact().reshape((N* H_out* W_out, inner_dim))
+    #     B_matrix = B.compact().reshape((inner_dim, C_out))
+    #     out = A_matrix @ B_matrix
+    #     return out.reshape((N, H_out, W_out, C_out))
+    
+    def forward(self, A, B):
+        # A and B are raw NumPy arrays here!
         pad = self.padding 
-        stride  = self.stride 
+        stride = self.stride 
         
-        if pad  >0:
-            A = A.pad(((0,0), (pad,pad), (pad,pad), (0,0)))
+        if pad > 0:
+            A = np.pad(A, ((0,0), (pad,pad), (pad,pad), (0,0)), mode='constant')
         
-        N,H,W,C_in = A.shape 
-        K , _,_ ,C_out = B.shape 
-        Ns,Hs,Ws,Cs = A.strides
+        N, H, W, C_in = A.shape 
+        K, _, _, C_out = B.shape 
+        Ns, Hs, Ws, Cs = A.strides
 
         H_out = (H - K) // stride + 1
         W_out = (W - K) // stride + 1
@@ -589,16 +661,17 @@ class Conv(Function):
         view_shape = (N, H_out, W_out, K, K, C_in)
         view_strides = (Ns, Hs * stride, Ws * stride, Hs, Ws, Cs)   
 
-        A_view = A.as_strided(shape=view_shape, strides=view_strides)
-        inner_dim = K* K* C_in
-        A_matrix = A_view.compact().reshape((N* H_out* W_out, inner_dim))
-        B_matrix = B.compact().reshape((inner_dim, C_out))
+        A_view = np.lib.stride_tricks.as_strided(A, shape=view_shape, strides=view_strides)
+        
+        inner_dim = K * K * C_in
+        A_matrix = np.ascontiguousarray(A_view).reshape((-1, inner_dim))
+        B_matrix = B.reshape((inner_dim, C_out)) 
+        
         out = A_matrix @ B_matrix
         return out.reshape((N, H_out, W_out, C_out))
-    
 
-    def gradient(self, out_grad, node):
-        A, B = node.inputs
+    def backward(self, out_grad, node):
+        A, B = node._inputs
         
         stride = self.stride
         padding = self.padding
@@ -621,6 +694,7 @@ class Conv(Function):
         grad_A_padding = K - 1 - padding
         grad_A = conv(grad_out_dilated, B_flipped, stride=1, padding=grad_A_padding)
 
+        # grad_A = grad_A[:, :H, :W, :]
         
         A_permuted = A.transpose((0, 3))
         

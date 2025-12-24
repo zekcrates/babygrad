@@ -26,38 +26,30 @@ class CompatibleDummyDataset(Dataset):
         data2 = np.full((self.feature_len,), -index, dtype=np.float32)
         
         return data1, data2
-
 def test_custom_dataloader_iteration():
-    """
-    Tests that the DataLoader iterates and creates batches in the expected format:
-    a tuple of Tensors, where each Tensor is a stacked sample.
-    """
     dataset = CompatibleDummyDataset(num_samples=10, feature_len=4)
-    loader = DataLoader(dataset, batch_size=4, shuffle=False)
+    batch_size = 4
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     
-    first_batch = next(iter(loader))
+    it = iter(loader)
+    next(it) # Batch 1: indices 0,1,2,3
+    next(it) # Batch 2: indices 4,5,6,7
+    final_batch = next(it) # Batch 3: indices 8,9
     
-
-    assert isinstance(first_batch, tuple)
+    assert final_batch[0].shape == (2, 4)
     
-    assert len(first_batch) == 4
-    assert all(isinstance(t, Tensor) for t in first_batch)
-    
-    tensor_1 = first_batch[0]
-    expected_shape = (2, 4) 
-    assert tensor_1.shape == expected_shape
-    
-    expected_content_1 = np.array([
-        [0., 0., 0., 0.],
-        [0., 0., 0., 0.]
+    expected_final_data = np.array([
+        [8., 8., 8., 8.],
+        [9., 9., 9., 9.]
     ], dtype=np.float32)
-    assert np.array_equal(tensor_1.data, expected_content_1)
     
-    tensor_2 = first_batch[1]
-    assert tensor_2.shape == expected_shape
+    assert np.array_equal(final_batch[0].data, expected_final_data), "Final batch data mismatch"
+def test_dataloader_shuffling():
+    dataset = CompatibleDummyDataset(num_samples=100, feature_len=1)
+    loader_1 = DataLoader(dataset, batch_size=10, shuffle=True)
+    loader_2 = DataLoader(dataset, batch_size=10, shuffle=True)
     
-    expected_content_2 = np.array([
-        [1., 1., 1., 1.],
-        [-1., -1., -1., -1.]
-    ], dtype=np.float32)
-    assert np.array_equal(tensor_2.data, expected_content_2)
+    batch1 = next(iter(loader_1))[0].data
+    batch2 = next(iter(loader_2))[0].data
+    
+    assert not np.array_equal(batch1, batch2), "Shuffle=True resulted in identical batches."

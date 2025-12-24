@@ -75,7 +75,9 @@ class Tensor:
                 continue
 
             if node.grad is None:
-                node.grad = out_grad.data.copy()
+                # node.grad = out_grad.data.copy()
+                node.grad = np.array(out_grad.data, copy=True)
+
             else:
                 node.grad += out_grad.data
 
@@ -93,7 +95,14 @@ class Tensor:
                             grads[parent_id] = grads[parent_id] + input_grads[i]
 
     
-    
+    def __getitem__(self, slices):
+        from .ops import tensor_slice
+        return tensor_slice(self, slices)
+    def compact(self):
+        """Returns a contiguous version of the tensor's data."""
+        from .ops import Contiguous
+        return Contiguous()(self)
+
     def numpy(self):
         """
         Return the data as a NumPy array (detached from the autograd graph).
@@ -233,7 +242,7 @@ class Tensor:
         """Power: a ** n"""
         from .ops import Pow, PowerScalar
         if isinstance(other, Tensor):
-            return Pow(self, other)
+            return Pow()(self, other)
         else:
             return PowerScalar(other)(self)
     

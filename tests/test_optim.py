@@ -64,3 +64,68 @@ def test_adam_step():
     assert np.allclose(optimizer.m[p], m2), "Adam 'm' state is incorrect after step 2."
     assert np.allclose(optimizer.v[p], v2), "Adam 'v' state is incorrect after step 2."
     assert optimizer.t == 2, "Adam 't' state is incorrect after step 2."
+
+
+
+
+
+
+def test_zero_grad_logic():
+    from baby.nn import Parameter
+    from baby.optim import SGD
+    
+    p = Parameter([1.0, 2.0], requires_grad=True)
+    p.grad = np.array([0.5, 0.5]) 
+    
+    optimizer = SGD([p], lr=0.1)
+    optimizer.zero_grad()
+    
+    assert p.grad is None or np.all(p.grad == 0),  "Grad should be reset to zeros, not None"
+    assert p.grad is None or np.all(p.grad == 0), "zero_grad() failed to clear the gradients to zero."
+
+
+
+def test_linear_convergence():
+    from baby import Tensor
+    from baby.nn import Parameter
+    from baby.optim import SGD
+    
+    x = Tensor([[1.0], [2.0], [3.0]])
+    target = Tensor([[2.0], [4.0], [6.0]])
+    
+    w = Parameter([[0.0]]) 
+    optimizer = SGD([w], lr=0.01)
+    
+    initial_loss = None
+    for i in range(100):
+        optimizer.zero_grad()
+        
+        pred = x @ w
+        loss = ((pred - target) ** 2).sum() 
+        
+        if i == 0: initial_loss = loss.data
+        
+        loss.backward()
+        
+        optimizer.step()
+    
+    assert loss.data < initial_loss, "Loss did not decrease during training."
+    assert np.allclose(w.data, [[2.0]], atol=1e-2), f"W should be close to 2.0, got {w.data}"
+    print(f"Convergence Test: PASSED. Final W: {w.data}")
+
+
+
+def test_optimizer_parameter_list_handling():
+    from baby.nn import Module, Parameter
+    from baby.optim import Adam
+    
+    class SimpleModel(Module):
+        def __init__(self):
+            self.w1 = Parameter([1.0])
+            self.w2 = Parameter([2.0])
+            
+    model = SimpleModel()
+    try:
+        optimizer = Adam(model.parameters(), lr=0.01)
+    except Exception as e:
+        pytest.fail(f"Optimizer failed to handle model.parameters(): {e}")

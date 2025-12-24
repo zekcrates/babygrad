@@ -129,14 +129,11 @@ def test_sigmoid_layer():
     x_np = np.array([[-1., 0., 2.], [0.5, -4., 1.]])
     x = Tensor(x_np, requires_grad=True)
     
-    # Act (Forward)
     output = layer(x)
     
-    # Assert (Forward)
     expected_forward = 1 / (1 + np.exp(-x_np))
     assert np.allclose(output.data, expected_forward), "Sigmoid forward pass is incorrect."
     
-    # Act & Assert (Backward using our numerical checker)
     numerical_gradient_check(layer, x)
 
 
@@ -223,7 +220,7 @@ def test_batchnorm1d_forward():
 
     layer.eval()
     running_mean_np = np.random.randn(dim).astype(np.float32)
-    running_var_np = np.random.rand(dim).astype(np.float32)  # Must be positive
+    running_var_np = np.random.rand(dim).astype(np.float32) 
     layer.running_mean.data = running_mean_np
     layer.running_var.data = running_var_np
 
@@ -241,7 +238,7 @@ def test_batchnorm1d_forward():
     output_train = layer(x)
     
     batch_mean_np = x_np.mean(axis=0)
-    batch_var_np = x_np.var(axis=0) # numpy.var with ddof=0 is correct here
+    batch_var_np = x_np.var(axis=0) 
     expected_x_hat_train = (x_np - batch_mean_np) / np.sqrt(batch_var_np + eps)
     expected_output_train = layer.weight.data * expected_x_hat_train + layer.bias.data
     
@@ -277,3 +274,65 @@ def test_batchnorm1d_backward():
                bias.reshape((1, dim)).broadcast_to(x.shape)
 
     numerical_gradient_check(batchnorm1d_op, x, layer.weight, layer.bias)
+
+
+
+def test_recursive_parameters():
+    from baby.nn import Module, Linear, Sequential
+    
+    class SubBlock(Module):
+        def __init__(self):
+            super().__init__()
+            self.l1 = Linear(10, 10)
+    
+    class BigModel(Module):
+        def __init__(self):
+            super().__init__()
+            self.block = SubBlock()
+            self.net = Sequential(Linear(10, 2))
+            
+    model = BigModel()
+    params = list(model.parameters())
+    
+    assert len(params) == 4, f"Expected 4 parameters, found {len(params)}"
+
+
+
+def test_mlp_classification_convergence():
+    from baby import Tensor
+    from baby.nn import Linear, ReLU, Sequential, SoftmaxLoss
+    from baby.optim import Adam
+    
+    x = Tensor(np.random.randn(4, 5))
+    y = np.array([0, 1, 2, 0]) # Target indices
+    
+    model = Sequential(
+        Linear(5, 10),
+        ReLU(),
+        Linear(10, 3)
+    )
+    loss_fn = SoftmaxLoss()
+    optimizer = Adam(model.parameters(), lr=0.1)
+    
+    initial_loss = loss_fn(model(x), y).data
+    for _ in range(20):
+        optimizer.zero_grad()
+        loss = loss_fn(model(x), y)
+        loss.backward()
+        optimizer.step()
+        
+    assert loss.data < initial_loss, "MLP Loss did not decrease. Check your SoftmaxLoss/Linear integration."
+    print(f"MLP Integration: PASSED. Final Loss: {loss.data}")
+
+
+def test_kaiming_init_stats():
+    from baby import init
+    
+    in_dim, out_dim = 1000, 1000
+    weights = init.kaiming_normal(in_dim, out_dim)
+    
+    expected_std = np.sqrt(2.0 / in_dim)
+    actual_std = np.std(weights.data)
+    
+    assert np.allclose(actual_std, expected_std, rtol=0.1), \
+        f"Kaiming init variance is wrong. Expected std {expected_std}, got {actual_std}"
