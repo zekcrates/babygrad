@@ -547,7 +547,10 @@ class Dilate(Function):
         out[tuple(slices)] = a 
         return out 
     def backward(self,out_grad, node):
-        return undilate(out_grad, self.axes, self.dilation)
+        slices = [slice(None)] * out_grad.ndim
+        for axis in self.axes:
+            slices[axis] = slice(0, None, self.dilation + 1)
+        return out_grad.data[tuple(slices)] 
         
 
 def dilate(a, axes, dilation=1):
@@ -578,7 +581,7 @@ class Undilate(Function):
 
         # Scatter gradients back
         grad[tuple(slices)] = out_grad.data
-        return np.asarray(grad).copy()
+        return Tensor(grad, device=a.device, dtype=a.dtype, requires_grad=False)
 
 
 def undilate(a, axes, dilation=1):
@@ -685,7 +688,7 @@ class Conv(Function):
         else:
             grad_out_dilated = out_grad
 
-        
+    
         B_transposed = B.transpose((2, 3))
         
         B_flipped = flip(B_transposed, (0, 1)) 
@@ -693,8 +696,6 @@ class Conv(Function):
         
         grad_A_padding = K - 1 - padding
         grad_A = conv(grad_out_dilated, B_flipped, stride=1, padding=grad_A_padding)
-
-        # grad_A = grad_A[:, :H, :W, :]
         
         A_permuted = A.transpose((0, 3))
         
