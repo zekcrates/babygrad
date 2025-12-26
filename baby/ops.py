@@ -190,8 +190,7 @@ class Reshape(Function):
         self.shape = shape
 
     def forward(self, a):
-        return a.reshape(self.shape)
-
+        return np.reshape(a,self.shape)
 
     def backward(self, out_grad, node):
         a = node._inputs[0]
@@ -373,11 +372,9 @@ class ReLU(Function):
 
     def backward(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        a = node._inputs[0]
-
-        relu_grad = a.data > 0
-
-        return out_grad * relu_grad
+        inp = node._inputs[0]
+        mask = Tensor((inp.data > 0).astype("float32"), requires_grad=False)
+        return multiply(out_grad, mask)
         ### END YOUR SOLUTION
 
 
@@ -393,9 +390,9 @@ class Sigmoid(Function):
         return out 
     
     def backward(self, out_grad, node):
-        sigm_oid = node.data 
-        local = sigm_oid * (1-sigm_oid)
-        return out_grad * local 
+        one = Tensor(1.0, requires_grad=False)
+        local_grad = multiply(node, add(one, negate(node)))
+        return multiply(out_grad, local_grad)
     
 
 def sigmoid(x):
@@ -406,9 +403,10 @@ class Tanh(Function):
     def forward(self,a):
         return np.tanh(a)
     def backward(self, out_grad, node):
-        tan_h = node.data 
-        local = 1- tan_h**2 
-        return out_grad *local 
+        one = Tensor(1.0, requires_grad=False)
+        squared = multiply(node, node)
+        local_grad = add(one, negate(squared))
+        return multiply(out_grad, local_grad)
     
 
 def tanh(x):
