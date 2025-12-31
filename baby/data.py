@@ -6,35 +6,7 @@ from typing import List, Optional
 import gzip 
 import struct 
 class Dataset:
-    """An Base class representing a dataset.
-
-    This is the base class for all datasets. Your own custom dataset should
-    inherit from this class and at least override the `__len__` method
-    (which returns the size of the dataset) and the `__getitem__` method
-    (which supports fetching a data sample at a given index).
-
-    Args:
-        transforms (list, optional): A list of functions or callable objects
-            that take a data sample and return a transformed version. Applied
-            in the order they are provided. Defaults to None.
-
-    Example:
-        >>> class MyNumberDataset(Dataset):
-        ...     def __init__(self, numbers):
-        ...         super().__init__()
-        ...         self.numbers = numbers
-        ...     def __len__(self):
-        ...         return len(self.numbers)
-        ...     def __getitem__(self, index):
-        ...         # Returns a tuple of (number, number_squared)
-        ...         return self.numbers[index], self.numbers[index] ** 2
-        ...
-        >>> dataset = MyNumberDataset([1, 2, 3, 4])
-        >>> print(f"Dataset size: {len(dataset)}")
-        Dataset size: 4
-        >>> print(f"Third sample: {dataset[2]}")
-        Third sample: (3, 9)
-    """
+    
     def __init__(self, transforms=None):
         self.transforms = transforms
 
@@ -125,4 +97,96 @@ class MNISTDataset(Dataset):
 
             return (np_sample_image, np_sample_label)
     def __len__(self) -> int:
+        return len(self.images)
+    
+
+
+
+class RandomFlipHorizontal:
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img):
+        # img shape: (3, 32, 32) -> (C, H, W)
+        if np.random.rand() < self.p:
+            # Flip along the last axis (Width)
+            return img[:, :, ::-1] 
+        return img
+
+class RandomCrop:
+    def __init__(self, padding=4):
+        self.padding = padding
+
+    def __call__(self, img):
+        # img shape: (3, 32, 32)
+        c, h, w = img.shape
+        
+        # 1. Pad only the H and W dimensions with zeros
+        padded = np.pad(img, ((0, 0), (self.padding, self.padding), (self.padding, self.padding)), mode='constant')
+        
+        # 2. Pick a random top-left corner
+        top = np.random.randint(0, 2 * self.padding + 1)
+        left = np.random.randint(0, 2 * self.padding + 1)
+        
+        # 3. Crop back to original size
+        return padded[:, top:top+h, left:left+w]
+
+import os
+import pickle
+from typing import Optional, List
+import numpy as np
+
+
+def unpickle(file):
+    with open(file, 'rb') as fo:
+        batch = pickle.load(fo, encoding='bytes')
+    batch[b'filenames'] = [name.decode('utf-8') for name in batch[b'filenames']]
+    return batch
+
+
+class CIFAR10Dataset(Dataset):
+    def __init__(self, base_folder: str, train: bool,
+                 p: Optional[int] = 0.5,
+                 transforms: Optional[List] = None):
+        super().__init__(transforms)
+        self.base_folder = base_folder
+        self.transforms = transforms
+        self.p = p
+        self.train = train
+
+        if train:
+            data_list = []
+            label_list = []
+            for i in range(1, 6):
+                batch = unpickle(f"{base_folder}/data_batch_{i}")
+                data_list.append(batch[b'data'])
+                label_list.extend(batch[b'labels'])
+            self.images = np.vstack(data_list)
+            self.labels = np.array(label_list)
+        else:
+            batch = unpickle(f"{base_folder}/test_batch")
+            self.images = batch[b'data']
+            self.labels = np.array(batch[b'labels'])
+
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            images_flat = np.array(self.images[index]) / 255
+            images_reshaped = images_flat.reshape(-1, 3, 32, 32)
+            labels_batch = np.array(self.labels[index])
+            return (images_reshaped, labels_batch)
+
+        
+        sample_image = self.images[index] / 255
+        sample_label = self.labels[index]
+
+        new_sample_image = sample_image.reshape(3, 32, 32)
+
+        if self.transforms:
+            for tform in self.transforms:
+                new_sample_image = tform(new_sample_image)
+
+        return (new_sample_image, sample_label)
+
+    def __len__(self):
         return len(self.images)

@@ -20,7 +20,7 @@ def train_epoch(model: Module, loss_fn: Module, optimizer: Adam, X_train: np.nda
         
         loss = loss_fn(logits, y_batch_np)
 
-        optimizer.reset_grad()
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 

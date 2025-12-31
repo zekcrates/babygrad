@@ -134,9 +134,6 @@ class Tensor:
             >>> z = y * 2       # This operation won't be in graph
         """
         return Tensor(self.data, requires_grad=False, dtype=str(self.dtype))
-    # ========================================
-    # PROPERTIES
-    # ========================================
     
     @property
     def shape(self):
