@@ -55,6 +55,8 @@ class DataLoader:
         self.batch_idx += 1
         return batch
     
+    def __len__(self):
+        return len(self.dataset) // self.batch_size
 
 class MNISTDataset(Dataset):
     def __init__(
